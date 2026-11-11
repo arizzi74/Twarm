@@ -274,3 +274,85 @@ func TestWebUIUpdateMonitorUsesTheActualAgentVersionLabel(t *testing.T) {
 		t.Fatal("update explanation still assumes Codex", w.Body.String())
 	}
 }
+
+func TestWebUIWorkerRestartRequiresAuthenticationCSRFAndExplicitTarget(t *testing.T) {
+	store := adminIntegrationStore(t)
+	token := webuiTestLogin(t, store)
+	server, err := New(store, Config{Origin: passkeyTestOrigin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		body, token, csrf string
+		code              int
+	}{
+		{`{"command":"tgrestartworker"}`, "", "csrf", 401},
+		{`{"command":"tgrestartworker"}`, token, "", 403},
+		{`{"command":"tgrestartworker"}`, token, "csrf", 400},
+		{`{"command":"tgrestartworker","session_id":"00000000-0000-4000-8000-000000000001"}`, token, "csrf", 400},
+		{`{"command":"tgstatus","request_id":"unexpected"}`, token, "csrf", 400},
+	} {
+		w := webUICommandRequestForTest(server, "POST", "/tgw/api/v1/webui/commands", tc.body, tc.token, passkeyTestOrigin, tc.csrf, "csrf")
+		if w.Code != tc.code {
+			t.Fatalf("status %d want %d: %s", w.Code, tc.code, w.Body.String())
+		}
+	}
+}
+
+func TestWebUIWorkerRestartPreparesTargetThenQueuesOnce(t *testing.T) {
+	ctx := t.Context()
+	store := adminIntegrationStore(t)
+	token := webuiTestLogin(t, store)
+	server, err := New(store, Config{Origin: passkeyTestOrigin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker, err := store.CreateWorker(ctx, registry.CreateWorkerInput{Name: "Raspberry Pi", OS: "linux", Arch: "arm64", TokenHash: auth.HashWorkerToken("restart-fixture-token")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	connection, runtimeID, sessionID := uuid.New(), uuid.New(), uuid.New()
+	if err := store.BindConnection(ctx, worker.ID, connection); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RecordHeartbeat(ctx, registry.Heartbeat{WorkerID: worker.ID, ConnectionID: connection, Runtimes: []registry.Runtime{{ID: runtimeID, WorkerID: worker.ID, ProfileID: "main", Name: "Claude Code", Generation: 1, State: "failed"}}}); err != nil {
+		t.Fatal(err)
+	}
+	session := protocol.Session{ID: sessionID.String(), WorkerID: worker.ID.String(), RuntimeID: runtimeID.String(), ThreadID: "thread", CWD: "/work", State: "running", ActiveTurnID: "busy-turn", UpdatedAt: time.Now().UTC()}
+	raw, _ := json.Marshal(session)
+	if err := store.IngestEvent(ctx, worker.ID, connection, protocol.Event{ID: uuid.NewString(), Seq: 1, WorkerID: worker.ID.String(), RuntimeID: runtimeID.String(), RuntimeGeneration: 1, SessionID: sessionID.String(), Kind: "session_discovered", OccurredAt: time.Now().UTC(), Data: raw}); err != nil {
+		t.Fatal(err)
+	}
+	path := "/tgw/api/v1/webui/commands"
+	response := webUICommandRequestForTest(server, "GET", path+"?command=tgrestartworker&session_id="+sessionID.String(), "", token, "", "", "")
+	if response.Code != 200 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	var prepared webUICommandResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &prepared); err != nil || prepared.Restart == nil {
+		t.Fatal(err, response.Body.String())
+	}
+	if prepared.Restart.WorkerName != "Raspberry Pi" || prepared.Restart.WorkerID != worker.ID.String() {
+		t.Fatal(prepared.Restart)
+	}
+	if pending, err := store.PendingCommands(ctx, 10); err != nil || len(pending) != 0 {
+		t.Fatal("GET queued a restart", pending, err)
+	}
+	request := webUICommandRequest{Command: "tgrestartworker", SessionID: sessionID.String(), RequestID: uuid.NewString(), Restart: prepared.Restart}
+	raw, _ = json.Marshal(request)
+	for i := 0; i < 2; i++ {
+		response = webUICommandRequestForTest(server, "POST", path, string(raw), token, passkeyTestOrigin, "csrf", "csrf")
+		if response.Code != 200 {
+			t.Fatal(response.Code, response.Body.String())
+		}
+	}
+	pending, err := store.PendingCommands(ctx, 10)
+	if err != nil || len(pending) != 1 || pending[0].ID != request.RequestID || pending[0].Operation != protocol.RestartWorker || pending[0].ExpectedTurnID != "" {
+		t.Fatalf("pending=%+v %v", pending, err)
+	}
+	// A normal worker result is accepted and does not finish the coding turn.
+	result, _ := json.Marshal(protocol.Result{CommandID: request.RequestID, State: "completed", Text: "Worker restart scheduled."})
+	if err := store.IngestEvent(ctx, worker.ID, connection, protocol.Event{ID: uuid.NewString(), Seq: 2, WorkerID: worker.ID.String(), RuntimeID: runtimeID.String(), RuntimeGeneration: 1, SessionID: sessionID.String(), Kind: "command_completed", OccurredAt: time.Now().UTC(), Data: result}); err != nil {
+		t.Fatal(err)
+	}
+}

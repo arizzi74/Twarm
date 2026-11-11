@@ -24,7 +24,10 @@ import (
 	"github.com/iaia/telegramgw/internal/codexadapter"
 )
 
-const maxMessageBytes = 32 << 20
+const (
+	maxMessageBytes       = 32 << 20
+	defaultStartupTimeout = 2 * time.Minute
+)
 
 // LaunchSettings is read afresh for each native CLI process. Env values are
 // child environment overrides, including ANTHROPIC_AUTH_TOKEN or
@@ -129,7 +132,7 @@ func Start(ctx context.Context, cfg Config) (*Runtime, error) {
 		cfg.Command = "claude"
 	}
 	if cfg.StartupTimeout <= 0 {
-		cfg.StartupTimeout = 30 * time.Second
+		cfg.StartupTimeout = defaultStartupTimeout
 	}
 	if cfg.RequestTimeout <= 0 {
 		cfg.RequestTimeout = 30 * time.Second

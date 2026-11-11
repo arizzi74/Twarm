@@ -92,6 +92,7 @@
     command('tginterrupt', 'Interrupt the running turn', 'local', '', { source: 'gateway' }),
     command('tgquestions', 'Show pending questions and approvals', 'local', '', { source: 'gateway' }),
     command('tginput', 'Answer a pending question or approval', 'local', '', { source: 'gateway' }),
+    command('tgrestartworker', 'Restart this session’s worker after confirmation', 'gateway', '', { busy: true, source: 'gateway' }),
     command('tgdeletesession', 'Choose a conversation to delete, keeping its files', 'local', '', { busy: false, source: 'gateway' }),
     unavailable('tgmultisession', 'Toggle Telegram messages from all sessions', 'This option controls the Telegram chat. The browser displays one selected session; use separate tabs for multiple sessions.', '[on|off]', { source: 'gateway' })
   ]);

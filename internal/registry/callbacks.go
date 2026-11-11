@@ -55,6 +55,9 @@ func (s *Store) CreateCallback(ctx context.Context, callback Callback) (string, 
 	if !validSessionPage(callback.Action, callback.SessionPage) {
 		return "", errors.New("registry: invalid callback session page")
 	}
+	if (callback.Action == "restart_worker_confirm" || callback.Action == "restart_worker_cancel") && (callback.SessionID == uuid.Nil || callback.RuntimeID == uuid.Nil || callback.Generation <= 0) {
+		return "", errors.New("registry: invalid restart callback")
+	}
 	if callback.Action == "history" && (callback.SessionID == uuid.Nil || callback.RuntimeID == uuid.Nil || callback.Generation <= 0 || callback.History.Validate() != nil) {
 		return "", errors.New("registry: invalid history callback")
 	}
@@ -231,6 +234,15 @@ func (s *Store) consumeCallback(ctx context.Context, tx *dbTx, in IncomingUpdate
 		return result, nil
 	}
 	switch action {
+	case "restart_worker_confirm", "restart_worker_cancel":
+		result, err := consumeWorkerRestart(ctx, tx, in, action, context, sessionID)
+		if err != nil {
+			return AcceptResult{}, err
+		}
+		if err := markUsed(); err != nil {
+			return AcceptResult{}, err
+		}
+		return result, nil
 	case "questions":
 		if err := markUsed(); err != nil {
 			return AcceptResult{}, err

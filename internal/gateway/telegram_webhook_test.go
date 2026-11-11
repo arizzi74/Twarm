@@ -108,3 +108,15 @@ func TestCodexAndGatewayNamespaces(t *testing.T) {
 		}
 	}
 }
+
+func TestParseTelegramWorkerRestartNeverBecomesAgentPrompt(t *testing.T) {
+	for _, input := range []string{"/tgrestartworker", "/tgrestartworker@mybot", "/tgrestartworker other"} {
+		action, target, text, ignore := parseTelegramText(input, "mybot")
+		if action != "restart_worker" || target != "" || ignore {
+			t.Fatal(action, target, text, ignore)
+		}
+	}
+	if _, _, _, ignore := parseTelegramText("/tgrestartworker@otherbot", "mybot"); !ignore {
+		t.Fatal("foreign bot restart accepted")
+	}
+}

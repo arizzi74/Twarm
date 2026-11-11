@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/iaia/telegramgw/internal/codexadapter"
 	"github.com/iaia/telegramgw/internal/config"
 	"github.com/iaia/telegramgw/internal/worker"
+	"github.com/iaia/telegramgw/internal/workerrestart"
 	"github.com/iaia/telegramgw/internal/workerupdate"
 )
 
@@ -30,6 +32,9 @@ func main() {
 }
 
 func run(args []string, logger *slog.Logger) error {
+	if len(args) == 1 && args[0] == "restart-service" {
+		return workerrestart.RunHelper(context.Background(), runtime.GOOS, "codex", workerrestart.Run)
+	}
 	path, err := defaultConfigPath()
 	if err != nil {
 		return err

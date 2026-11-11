@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"strconv"
@@ -33,6 +34,7 @@ type process struct {
 	stopOnce      sync.Once
 	interrupting  bool   // Protected by server.mu.
 	providerError string // Protected by server.mu; never persisted verbatim.
+	startupError  string // Protected by server.mu; safe initialization diagnostics only.
 	messageOwners map[string]string
 	messageOrder  []string
 	seenFrames    map[string]bool
@@ -172,11 +174,19 @@ func (s *server) startProcess(thread *savedThread) (*process, error) {
 						p.publishStatus(thread)
 						if settings.PermissionMode != "" && settings.PermissionMode != native.PermissionMode {
 							p.initErr = errors.New("Claude Code did not accept the requested permission mode; native settings or organization policy may disable it. Choose an allowed mode before retrying")
-							// Initialization is local control traffic. Stop here,
-							// before submitting a model prompt under another mode.
-							p.finish(thread, "failed", p.initErr.Error())
+							p.startupError = p.initErr.Error()
 						}
 					}
+				}
+			}
+			s.mu.Unlock()
+		}
+		if p.initErr != nil {
+			s.mu.Lock()
+			if p.startupError == "" {
+				p.startupError = "Claude Code could not initialize. The prompt was not sent. Check the worker and retry."
+				if errors.Is(p.initErr, context.DeadlineExceeded) {
+					p.startupError = fmt.Sprintf("Claude Code initialization timed out after %s. The prompt was not sent. Please retry.", s.cfg.StartupTimeout)
 				}
 			}
 			s.mu.Unlock()
@@ -306,6 +316,11 @@ func (p *process) interrupt(turnID string) {
 		return
 	case <-p.server.ctx.Done():
 		return
+	default:
+		// Initialization has not admitted a prompt yet. Cancellation must not
+		// wait for the full startup allowance or need a native control reply.
+		p.stop()
+		return
 	}
 	ctx, cancel := context.WithTimeout(p.server.ctx, 5*time.Second)
 	defer cancel()
@@ -396,7 +411,15 @@ func (p *process) read() {
 		if p.interrupting || p.server.closed {
 			status = "interrupted"
 		}
-		p.finish(t, status, "Claude Code exited before the turn completed.")
+		message := "Claude Code exited before the turn completed."
+		if status == "failed" {
+			if p.startupError != "" {
+				message = p.startupError
+			} else if !p.lifecycle.submitted {
+				message = "Claude Code exited during initialization. The prompt was not sent. Please retry."
+			}
+		}
+		p.finish(t, status, message)
 	}
 }
 

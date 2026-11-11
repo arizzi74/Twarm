@@ -23,6 +23,7 @@ import (
 // Agent joins runtime supervision, independent session actors, and the durable
 // transport. The network context never owns a runtime or an accepted turn.
 type Agent struct {
+	restartWorker     func(context.Context, protocol.Command) error
 	historySource     func(context.Context, string) (webUIHistorySource, error)
 	webHistory        webUIHistoryCache
 	webHistoryTiming  chan struct{}
@@ -186,6 +187,9 @@ func (a *Agent) dispatch(ctx context.Context, c protocol.Command) (protocol.Comm
 	}
 	if runtime.ID != "" && runtime.Generation != c.RuntimeGeneration {
 		return a.reject(c, protocol.StaleRuntime, "Runtime generation no longer matches.")
+	}
+	if c.Operation == protocol.RestartWorker {
+		return a.dispatchWorkerRestart(ctx, c, runtime)
 	}
 	if !ok {
 		return a.reject(c, protocol.CodexUnavailable, "Runtime is not available.")

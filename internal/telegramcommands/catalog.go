@@ -13,6 +13,7 @@ var gateway = []Command{
 	{"tgstart", "Gateway: getting started"},
 	{"tghelp", "Gateway: command guide"},
 	{"tginstances", "Gateway: workers and runtimes"},
+	{"tgrestartworker", "Gateway: restart this session’s worker (confirmation)"},
 	{"tgupdateworkers", "Gateway: check and update workers and Codex when idle"},
 	{"tgsessions", "Gateway: choose a session"},
 	{"tgstatus", "Gateway: connection, session and queue state"},

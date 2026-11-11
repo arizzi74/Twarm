@@ -237,6 +237,8 @@ func parseTelegramText(text, botName string) (action, target, prompt string, ign
 	}
 	name = strings.ToLower(name)
 	switch name {
+	case "tgrestartworker":
+		return "restart_worker", "", tail, false
 	case "tgupdateworkers":
 		return "update_workers", "", tail, false
 	case "start", "tgstart", "tghelp":

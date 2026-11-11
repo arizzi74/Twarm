@@ -135,6 +135,7 @@
       if (prompt.value.trim() === original.trim()) { prompt.value = ''; ctx.saveDraft(); }
     }
     function unavailable(entry) {
+      if (entry.name === 'tgrestartworker') return !state.authenticated ? 'Sign in to use commands.' : !state.selected ? 'Select a session first.' : '';
       if (entry.source === 'claude' && !ctx.isClaude?.()) return 'This command is available for Claude Code sessions.';
       if (ctx.isClaude?.()) {
         if (entry.name === 'approvals') return 'Use /permissions to choose Claude Code’s permission mode.';
@@ -421,6 +422,20 @@
       name = entry.name;
       const reason = unavailable(entry);
       if (reason) { show('/' + name); text(reason); return; }
+      if (name === 'tgrestartworker') {
+        if (args) { show('/' + name); text('Use /tgrestartworker without arguments.', true); return; }
+        const sessionID = state.selected.session_id;
+        return perform('/' + name, () => ctx.gatewayCommand(name, { prepare: true }), result => {
+          const target = result.restart;
+          if (!target || target.session_id !== sessionID || state.selected?.session_id !== sessionID) throw new Error('The selected session changed. Start a new confirmation.');
+          consume(original);
+          confirm('/' + name, 'Restart worker ' + target.worker_name + '?\nThis affects ALL sessions on this worker. Active turns may be interrupted. Saved conversations and project files are kept.', 'Restart worker', () => {
+            if (state.selected?.session_id !== sessionID) { show('/' + name); text('The selected session changed. Start a new confirmation.', true); return; }
+            const requestID = crypto.randomUUID();
+            return perform('/' + name, () => ctx.gatewayCommand(name, { restart: target, requestID }), result => text(result.text || 'Worker restart requested.'));
+          });
+        });
+      }
       if (entry.kind === 'gateway') {
         if (args) { show('/' + name); text('Use /' + name + ' without arguments.', true); return; }
         return perform('/' + name, () => ctx.gatewayCommand(name), result => {

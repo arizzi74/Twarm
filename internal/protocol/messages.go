@@ -108,6 +108,7 @@ type Operation string
 
 const (
 	StartTurn           Operation = "start_turn"
+	RestartWorker       Operation = "restart_worker"
 	StoreFiles          Operation = "store_files"
 	NewSession          Operation = "new_session"
 	Steer               Operation = "steer"
@@ -183,12 +184,18 @@ func (c Command) Validate() error {
 		if c.SessionID != "" || c.ThreadID != "" {
 			return errors.New("new session cannot target an existing thread")
 		}
-	case StartTurn, StoreFiles, Steer, Interrupt, ApprovalResponse, InputResponse, CodexCommand, ReadHistory, DeleteSession, RenameSession, ArchiveSession:
+	case StartTurn, StoreFiles, Steer, Interrupt, ApprovalResponse, InputResponse, CodexCommand, ReadHistory, DeleteSession, RenameSession, ArchiveSession, RestartWorker:
 		if _, err := uuid.Parse(c.SessionID); err != nil || c.ThreadID == "" {
 			return errors.New("missing session target")
 		}
 	default:
 		return &Error{Code: UnsupportedOperation, Message: "The worker does not support this operation. Update the worker and try again."}
+	}
+	if c.Operation == RestartWorker {
+		data, _ := json.Marshal(c.Arguments)
+		if string(data) != "{}" || c.ExpectedTurnID != "" {
+			return errors.New("restart does not accept arguments or a turn target")
+		}
 	}
 	if (c.Operation == Steer || c.Operation == Interrupt) && c.ExpectedTurnID == "" {
 		return errors.New("missing expected turn")

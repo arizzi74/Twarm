@@ -136,6 +136,16 @@ class InstallerReleaseScopeTest(unittest.TestCase):
             with self.assertRaises(POLICY.ScopeError):
                 self.validate(scope="webui")
 
+    def test_worker_maintenance_scope_refuses_unrelated_changes(self):
+        changed = POLICY.WORKER_MAINTENANCE_ALLOWED | {f"docs/releases/{self.tag}.md"}
+        self.target(changed)
+        self.assertEqual(self.validate(scope="worker-maintenance"), changed)
+        for name in ("internal/audio/audio.go", "native/whisper/source.env", "go.mod", "package-lock.json", "scripts/publish-release.py", ".github/workflows/security.yml"):
+            self.setUp()
+            self.target(("internal/worker/restart.go", name))
+            with self.assertRaises(POLICY.ScopeError):
+                self.validate(scope="worker-maintenance")
+
     def test_invalid_or_nonadvancing_stable_tags_are_refused(self):
         self.target()
         for tag in ("main", "v1.2.4-rc1", "v01.2.4", "v1.2.4\n", self.baseline, "v0.9.9"):
@@ -200,7 +210,7 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         expression = section.split("    if: >-\n", 1)[1].split("    runs-on:", 1)[0]
         checks = {"go-checks", "browser", "native-session-archive", "installer-tests",
                   "claude-compaction-tests", "claude-usage-tests", "claude-skills-tests",
-                  "webui-question-tests", "webui-tests"}
+                  "webui-question-tests", "webui-tests", "worker-maintenance-tests"}
         modes = {
             "full": (None, {"go-checks", "browser", "native-session-archive"}),
             "installer": ("installer_only", {"installer-tests"}),
@@ -209,6 +219,7 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
             "skills": ("claude_skills_only", {"claude-skills-tests"}),
             "questions": ("webui_questions_only", {"webui-question-tests"}),
             "webui": ("webui_only", {"webui-tests"}),
+            "worker-maintenance": ("worker_maintenance_only", {"worker-maintenance-tests"}),
         }
         def permits(flags, results):
             rendered = re.sub(r"needs\.release-mode\.outputs\.([a-z_]+)",
@@ -253,7 +264,7 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         self.assertIn("if: always() && !cancelled() && needs.test-and-build.result == 'success'", jobs["publish"])
         for name in ("native-whisper", "native-speech"):
             self.assertIn("needs: release-mode", jobs[name])
-            self.assertIn("run-smoke-tests: ${{ needs.release-mode.outputs.installer_only != 'true' && needs.release-mode.outputs.claude_compaction_only != 'true' && needs.release-mode.outputs.claude_usage_only != 'true' && needs.release-mode.outputs.claude_skills_only != 'true' && needs.release-mode.outputs.webui_questions_only != 'true' && needs.release-mode.outputs.webui_only != 'true' }}", jobs[name])
+            self.assertIn("run-smoke-tests: ${{ needs.release-mode.outputs.installer_only != 'true' && needs.release-mode.outputs.claude_compaction_only != 'true' && needs.release-mode.outputs.claude_usage_only != 'true' && needs.release-mode.outputs.claude_skills_only != 'true' && needs.release-mode.outputs.webui_questions_only != 'true' && needs.release-mode.outputs.webui_only != 'true' && needs.release-mode.outputs.worker_maintenance_only != 'true' }}", jobs[name])
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.claude_compaction_only", text)
         self.assertIn('for mode in "$INSTALLER_ONLY" "$CLAUDE_COMPACTION_ONLY" "$CLAUDE_USAGE_ONLY"', text)
         self.assertIn('if (( selected > 1 )); then', text)
@@ -306,6 +317,16 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         self.assertNotIn("test-admin-audio", usage)
         self.assertIn("needs.release-mode.outputs.claude_usage_only == 'false'", gate)
         self.assertIn("needs.release-mode.outputs.claude_usage_only == 'true'", gate)
+
+    def test_worker_maintenance_checks_are_scoped_and_do_not_run_audio(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
+        self.assertIn("inputs.worker_maintenance_only", text)
+        self.assertIn("--scope worker-maintenance", text)
+        for required in ("go test -race ./internal/claudeadapter", "./internal/workerrestart", "Test(TelegramWorkerRestart|WebUIWorkerRestart)", "node scripts/test-webui-worker-restart.cjs", "node scripts/test-webui.cjs"):
+            self.assertIn(required, job)
+        self.assertNotIn("test-admin-audio", job)
+        self.assertNotIn("npm run test:browser", job)
 
     def test_native_smoke_defaults_and_cache_admission_stay_strict(self):
         for name in ("native-whisper", "native-speech"):

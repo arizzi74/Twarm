@@ -3253,14 +3253,14 @@
     closeSocket(); disableQuestions(); connection('disconnected', 'Disconnected. Running work continues; your draft is kept.'); updateControls();
   }
   async function gatewayCommand(command, options = {}) {
-    const readonly = command === 'tgstatus' || command === 'tginstances';
+    const readonly = command === 'tgstatus' || command === 'tginstances' || command === 'tgrestartworker' && options.prepare === true;
     const generation = state.generation;
     const csrf = document.cookie.split('; ').find(value => value.startsWith('__Host-telegramgw-csrf='))?.split('=').slice(1).join('=') || '';
     const controller = new AbortController(); gatewayCommandAbort = controller;
     const timeout = setTimeout(() => controller.abort(), 30000);
     let response;
     try {
-      const parameters = { command, ...(options.includeSession !== false && state.selected ? { session_id: state.selected.session_id } : {}) };
+      const parameters = { command, ...(options.includeSession !== false && state.selected ? { session_id: state.selected.session_id } : {}), ...(command === 'tgrestartworker' && options.restart ? { restart: options.restart, request_id: options.requestID } : {}) };
       const url = api + '/commands' + (readonly ? '?' + new URLSearchParams(parameters) : '');
       response = await fetch(url, { method: readonly ? 'GET' : 'POST', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         ...(readonly ? {} : { headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify(parameters) }) });

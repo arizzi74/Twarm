@@ -190,6 +190,19 @@ access or move existing projects.
 A follow-up sent during a Claude turn is **queued** for a separate successor
 turn. It does not change the current turn's instructions. The browser labels the
 button **Queue**; Telegram's active-turn messages follow the same queue behavior.
+Claude Code has up to **120 seconds** to initialize before a new prompt is sent.
+This accommodates slower devices and connector startup. A timeout explicitly
+states that the prompt was not sent; it is never retried automatically. Cancel
+remains available during initialization.
+
+Use `/tgrestartworker` in Telegram or the Web UI to restart the selected
+session’s worker. A confirmation names the worker and warns that all its
+sessions are affected and active turns may be interrupted. The request is
+scheduled by the user service manager (Linux systemd or macOS launchd); it
+does not send a model prompt. Requests expire after one minute and are not
+replayed after execution has started. Saved conversations and project files
+are retained.
+
 A worker restart never silently replays uncertain prompts. Pending bridge queue
 items are cancelled with a saved history notice so they can be resent explicitly.
 

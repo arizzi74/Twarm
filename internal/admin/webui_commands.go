@@ -2,6 +2,7 @@ package admin
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,8 +13,10 @@ import (
 )
 
 type webUICommandRequest struct {
-	Command   string `json:"command"`
-	SessionID string `json:"session_id,omitempty"`
+	Command   string                        `json:"command"`
+	SessionID string                        `json:"session_id,omitempty"`
+	RequestID string                        `json:"request_id,omitempty"`
+	Restart   *registry.WorkerRestartTarget `json:"restart,omitempty"`
 }
 
 type webUICommandInstance struct {
@@ -31,6 +34,8 @@ type webUICommandInstance struct {
 }
 
 type webUICommandResponse struct {
+	Restart        *registry.WorkerRestartTarget `json:"restart,omitempty"`
+	CommandID      string                        `json:"command_id,omitempty"`
 	Command        string                        `json:"command"`
 	Text           string                        `json:"text"`
 	Workers        []registry.WorkerUpdateStatus `json:"workers,omitempty"`
@@ -57,6 +62,7 @@ func (s *Server) webuiCommands(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]any{"commands": []map[string]string{
 				{"name": "tgstatus", "description": "Gateway, worker and queued update status"},
 				{"name": "tginstances", "description": "List enrolled workers and agent runtimes"},
+				{"name": "tgrestartworker", "description": "Restart this session’s worker after confirmation"},
 				{"name": "tgupdateworkers", "description": "Queue worker updates and supported agent runtime checks"},
 			}})
 			return
@@ -64,7 +70,7 @@ func (s *Server) webuiCommands(w http.ResponseWriter, r *http.Request) {
 	} else if !decode(w, r, &in) {
 		return
 	}
-	if in.Command != "tgstatus" && in.Command != "tginstances" && in.Command != "tgupdateworkers" {
+	if in.Command != "tgstatus" && in.Command != "tginstances" && in.Command != "tgupdateworkers" && in.Command != "tgrestartworker" {
 		http.Error(w, "unsupported gateway command", http.StatusBadRequest)
 		return
 	}
@@ -78,8 +84,42 @@ func (s *Server) webuiCommands(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if in.Command != "tgrestartworker" && (in.Restart != nil || in.RequestID != "") {
+		bad(w)
+		return
+	}
 	response := webUICommandResponse{Command: in.Command}
-	if in.Command == "tgupdateworkers" {
+	if in.Command == "tgrestartworker" {
+		sessionID, err := uuid.Parse(in.SessionID)
+		if err != nil {
+			bad(w)
+			return
+		}
+		if r.Method == http.MethodGet {
+			target, err := s.store.WorkerRestartTarget(r.Context(), sessionID)
+			if err != nil {
+				http.Error(w, "The selected worker is unavailable. Refresh sessions and try again.", http.StatusConflict)
+				return
+			}
+			response.Restart = &target
+		} else {
+			requestID, err := uuid.Parse(in.RequestID)
+			if err != nil || in.Restart == nil || in.Restart.SessionID != in.SessionID {
+				bad(w)
+				return
+			}
+			response.CommandID, err = s.store.QueueWebUIWorkerRestart(r.Context(), *in.Restart, requestID)
+			if err != nil {
+				if errors.Is(err, registry.ErrCallbackInvalid) || errors.Is(err, registry.ErrTelegramTarget) {
+					http.Error(w, "The selected session or worker changed. Start a new confirmation.", http.StatusConflict)
+					return
+				}
+				http.Error(w, "The worker restart could not be queued. Refresh worker status before retrying.", http.StatusConflict)
+				return
+			}
+			response.Text = "Worker restart requested. All sessions on this worker may briefly disconnect and active turns may be interrupted."
+		}
+	} else if in.Command == "tgupdateworkers" {
 		workers, err := s.store.QueueWebUIWorkerUpdates(r.Context())
 		if err != nil {
 			fail(w, err)

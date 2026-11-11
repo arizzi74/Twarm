@@ -371,3 +371,24 @@ the singleton administrator record exists. Recover from a tested database
 backup or follow a separately approved incident procedure. Rotating a worker
 token fences its active connection, so update
 the worker token file and restart that worker promptly.
+
+## Restart a selected session’s worker
+
+Use `/tgrestartworker` in Telegram or the Web UI. Confirm the named worker to
+restart its user service, including its Codex or Claude Code runtime processes.
+This affects all sessions on that worker and may interrupt active turns. Cancel
+leaves the worker running. Conversations and project files are retained. The
+command is maintenance work and is never submitted as a coding agent prompt.
+
+The worker must be online and support this command. It requires the installed
+Linux systemd user service or macOS launchd user service; manually launched
+workers return an explanatory error. The service must own the requesting worker’s
+process, preventing a manually launched worker from restarting another instance.
+A successful response means the restart
+has been scheduled, not that it has finished. Watch for the worker to reconnect;
+if it does not, check the user service and the `*-request-restart-*` helper logs
+on its host. The helper does not retry a failed restart or overlap an installer
+update. Restart confirmations are tied to the initiating user, bot, chat, session
+and runtime generation. Switching Telegram selection invalidates an old
+confirmation. Unacknowledged restart commands are deduplicated; executing
+commands are never automatically replayed after a crash.

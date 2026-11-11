@@ -134,6 +134,11 @@ func TestClaudeProcessHelper(t *testing.T) {
 				if !probe && os.Getenv("MACT_CLAUDE_HELPER_HANG_INIT") == "1" {
 					continue
 				}
+				if !probe {
+					if delay, err := time.ParseDuration(os.Getenv("MACT_CLAUDE_HELPER_INIT_DELAY")); err == nil {
+						time.Sleep(delay)
+					}
+				}
 				catalog := map[string]any{}
 				if skills := os.Getenv("MACT_CLAUDE_HELPER_SKILLS"); skills != "" {
 					var commands any

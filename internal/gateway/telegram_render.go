@@ -90,6 +90,12 @@ func (s *Sender) renderUIResponse(ctx context.Context, row registry.Delivery) (s
 		return telegramErrorText(response.ErrorCode), nil, nil
 	}
 	switch response.View {
+	case "worker_restart_confirm":
+		return s.renderWorkerRestart(ctx, row, response)
+	case "worker_restart_cancelled":
+		return "Worker restart cancelled.", nil, nil
+	case "worker_restart_queued":
+		return "Worker restart requested. Waiting for the worker to schedule its restart.", nil, nil
 	case "voice_transcribing", "voice_transcript":
 		title := "🎙 Voice note"
 		presentation, err := s.deliveryPresentation(ctx, row)
@@ -809,7 +815,7 @@ func (s *Sender) inventory(ctx context.Context) (renderInventory, error) {
 func (s *Sender) callback(ctx context.Context, row registry.Delivery, callback registry.Callback) (string, error) {
 	if row.Kind == "ui_response" {
 		switch callback.Action {
-		case "sessions", "select", "connect", "new":
+		case "sessions", "select", "connect", "new", "restart_worker_confirm", "restart_worker_cancel":
 			callback.OriginDeliveryID = row.ID
 		}
 	}
@@ -854,7 +860,7 @@ func findQuestion(questions []protocol.Question, id string) (protocol.Question, 
 }
 
 func helpText() string {
-	return "Gateway commands:\n/tgstart — getting started\n/tghelp — show this guide\n/tginstances — list workers and runtimes\n/tgupdateworkers — check worker and agent runtime versions; update when idle\n/tgsessions — list, select, or create sessions\n/tgstatus — show gateway session and queue state\n/tghistory [count] — show recent user and Codex messages, newest last (default 2)\n/tglastmessages [count] — show recent user and Codex messages, newest last (default 1)\n/tgmultisession [on|off] — toggle messages from all sessions\n/tgdisconnect — clear the selection\n/tgdeletesession — delete a session and keep its folder\n/tgsteer <text> — guide the active turn\n/tginterrupt — stop the active turn\n/tgquestions — show pending questions and approvals from all sessions\n/tginput [<approval-id> <question-id> <answer>] — show requests or answer one\n\nType /_ for session command suggestions in either mode. You can use /_<session_alias> <message> to send to a session without changing your selection, or /_<session_alias> to select it. /tgmultisession controls which sessions send messages here.\n\nCodex commands use their usual names: /status, /model, /compact, /review and more. Use /help for the full list or the bot menu."
+	return "Gateway commands:\n/tgstart — getting started\n/tghelp — show this guide\n/tginstances — list workers and runtimes\n/tgrestartworker — restart the selected session’s worker (confirmation)\n/tgupdateworkers — check worker and agent runtime versions; update when idle\n/tgsessions — list, select, or create sessions\n/tgstatus — show gateway session and queue state\n/tghistory [count] — show recent user and Codex messages, newest last (default 2)\n/tglastmessages [count] — show recent user and Codex messages, newest last (default 1)\n/tgmultisession [on|off] — toggle messages from all sessions\n/tgdisconnect — clear the selection\n/tgdeletesession — delete a session and keep its folder\n/tgsteer <text> — guide the active turn\n/tginterrupt — stop the active turn\n/tgquestions — show pending questions and approvals from all sessions\n/tginput [<approval-id> <question-id> <answer>] — show requests or answer one\n\nType /_ for session command suggestions in either mode. You can use /_<session_alias> <message> to send to a session without changing your selection, or /_<session_alias> to select it. /tgmultisession controls which sessions send messages here.\n\nCodex commands use their usual names: /status, /model, /compact, /review and more. Use /help for the full list or the bot menu."
 }
 
 func codexHelpText() string {
@@ -890,6 +896,8 @@ func telegramErrorText(code string) string {
 		return "This voice note was cancelled because access to its destination changed."
 	case "voice_cancelled":
 		return "Voice note cancelled."
+	case "restart_worker_usage":
+		return "Select a session with /tgsessions, then use /tgrestartworker without arguments. You will be asked to confirm restarting its entire worker."
 	case "worker_updates_usage":
 		return "Use /tgupdateworkers without arguments to check and update workers and their runtimes when idle."
 	case "image_too_large":
