@@ -106,6 +106,11 @@ func TestClaudeProcessHelper(t *testing.T) {
 		send(map[string]any{"type": "assistant", "message": map[string]any{"id": id, "stop_reason": "end_turn", "content": []any{map[string]any{"type": "text", "text": text}}}})
 		send(map[string]any{"type": "result", "subtype": "success", "result": text, "session_id": session})
 	}
+	var mcpServers []map[string]any
+	_ = json.Unmarshal([]byte(os.Getenv("MACT_CLAUDE_HELPER_MCP")), &mcpServers)
+	if mcpServers == nil {
+		mcpServers = []map[string]any{}
+	}
 	mode := ""
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 65536), maxMessageBytes)
@@ -122,6 +127,8 @@ func TestClaudeProcessHelper(t *testing.T) {
 			_ = json.Unmarshal(msg["request_id"], &id)
 			var request struct {
 				Subtype       string         `json:"subtype"`
+				ServerName    string         `json:"serverName"`
+				Enabled       bool           `json:"enabled"`
 				Hooks         map[string]any `json:"hooks"`
 				SkipBehaviors bool           `json:"skip_behaviors"`
 				Mode          string         `json:"mode"`
@@ -152,6 +159,28 @@ func TestClaudeProcessHelper(t *testing.T) {
 					catalog["current_permission_mode"] = effective
 				}
 				send(map[string]any{"type": "control_response", "response": map[string]any{"subtype": "success", "request_id": id, "response": catalog}})
+			}
+			if strings.HasPrefix(request.Subtype, "mcp_") {
+				log(map[string]any{"mcp": request.Subtype, "server": request.ServerName, "enabled": request.Enabled})
+				if os.Getenv("MACT_CLAUDE_HELPER_MCP_ERROR") == request.Subtype {
+					send(map[string]any{"type": "control_response", "response": map[string]any{"subtype": "error", "request_id": id, "error": "PRIVATE MCP CREDENTIAL FAILURE"}})
+					continue
+				}
+				if os.Getenv("MACT_CLAUDE_HELPER_MCP_HANG") == request.Subtype {
+					continue
+				}
+				if request.Subtype != "mcp_status" {
+					for _, server := range mcpServers {
+						if server["name"] == request.ServerName {
+							server["status"] = "connected"
+							if request.Subtype == "mcp_toggle" && !request.Enabled {
+								server["status"] = "disabled"
+							}
+						}
+					}
+				}
+				send(map[string]any{"type": "control_response", "response": map[string]any{"subtype": "success", "request_id": id, "response": map[string]any{"mcpServers": mcpServers}}})
+				continue
 			}
 			if request.Subtype == "interrupt" {
 				send(map[string]any{"type": "control_response", "response": map[string]any{"subtype": "success", "request_id": id, "response": map[string]any{}}})

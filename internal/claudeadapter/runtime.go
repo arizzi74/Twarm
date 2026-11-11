@@ -75,6 +75,7 @@ var supportedMethods = []string{
 	"thread/status/read", "thread/settings/update", "thread/delete", "thread/history/recover",
 	"thread/compact/start",
 	"thread/skills/list", "thread/skill/start",
+	"thread/mcp/status", "thread/mcp/update",
 }
 
 // SupportedMethods is an exhaustive allowlist. In particular Claude's queued

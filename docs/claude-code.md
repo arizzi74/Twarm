@@ -437,3 +437,27 @@ Retention removes only old native version files that MACT created and whose
 contents still match its recorded hash. Independently installed or changed files
 are preserved, along with global configuration, credentials, projects and
 conversations.
+
+## MCP connections
+
+`/mcp` in a Claude Code session in the WebUI or Telegram reports that session’s
+native MCP server names, connection states and tool counts. `/mcp verbose` also
+shows the scope, server version and tool names (up to 100 per server).
+
+- `/mcp reconnect <server>` retries the named connection. `/mcp reconnect` or
+  `/mcp reconnect all` retries servers whose state is failed or needs-auth.
+- `/mcp enable <server|all>` enables disabled connections.
+- `/mcp disable <server|all>` disconnects servers and removes their tools through
+  Claude Code’s native control API. Running tool calls can be affected.
+
+Use the exact server name from the list, including spaces. Native policy and
+configuration continue to determine which connections can be changed and how
+those changes are persisted. These commands create no model turn and can run
+while a session is working. Authentication requiring an interactive sign-in is
+completed through native Claude Code on the worker host; reconnect afterward.
+Raw server configuration, environment, headers, endpoints and error payloads are
+excluded from the returned status. Unconfirmed mutations are never automatically
+replayed. A cold session may need time to initialize before returning status.
+
+Native contracts: [MCP guide](https://code.claude.com/docs/en/mcp) and
+[Agent SDK controls](https://code.claude.com/docs/en/agent-sdk/typescript#query-object).

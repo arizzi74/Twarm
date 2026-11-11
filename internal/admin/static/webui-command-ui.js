@@ -141,7 +141,7 @@
         if (entry.name === 'approvals') return 'Use /permissions to choose Claude Code’s permission mode.';
         if (['delete', 'tgdeletesession'].includes(entry.name) && ctx.deletionUnavailable?.()) return ctx.deletionUnavailable();
         if (entry.name === 'tgsteer') return 'Claude Code cannot steer an active turn. Send a normal message to queue it after the current turn.';
-        if (entry.kind === 'unavailable' || entry.kind === 'worker' && !['model', 'permissions', 'status', 'usage', 'pwd', 'rename', 'delete', 'diff', 'stop', 'compact', 'skill', 'skills'].includes(entry.name)) return 'This command is unavailable for Claude Code workers.';
+        if (entry.kind === 'unavailable' || entry.kind === 'worker' && !['model', 'permissions', 'status', 'usage', 'pwd', 'rename', 'delete', 'diff', 'stop', 'compact', 'skill', 'skills', 'mcp'].includes(entry.name)) return 'This command is unavailable for Claude Code workers.';
       }
       if (entry.kind === 'unavailable') return entry.reason;
       if (entry.kind === 'gateway' || ['help', 'tghelp', 'theme', 'title', 'tui', 'resume', 'agents', 'tgsessions'].includes(entry.name)) return state.authenticated ? '' : 'Sign in to use commands.';
@@ -158,7 +158,7 @@
         const reason = unavailable(entry);
         const item = node('button', 'command-option' + (reason ? ' unavailable' : '')); item.type = 'button'; item.id = 'slash-option-' + i;
         item.setAttribute('role', 'option'); item.setAttribute('aria-selected', String(i === index));
-        item.append(node('span', 'command-name', '/' + entry.name), node('span', 'command-description', ctx.isClaude?.() ? ({ model: 'Choose the Claude Code model and effort level', permissions: 'Choose the Claude Code permission mode', usage: 'View API spend and Claude Code usage limits', copy: 'Copy the latest Claude Code response as Markdown', tgupdateworkers: 'Check worker and agent runtime versions; update when idle' })[entry.name] || entry.description : entry.description));
+        item.append(node('span', 'command-name', '/' + entry.name), node('span', 'command-description', ctx.isClaude?.() ? ({ model: 'Choose the Claude Code model and effort level', permissions: 'Choose the Claude Code permission mode', usage: 'View API spend and Claude Code usage limits', mcp: 'Inspect, reconnect, enable or disable Claude Code MCP servers', copy: 'Copy the latest Claude Code response as Markdown', tgupdateworkers: 'Check worker and agent runtime versions; update when idle' })[entry.name] || entry.description : entry.description));
         if (reason) { item.title = reason; item.append(node('span', 'command-badge', entry.kind === 'unavailable' ? 'CLI only' : 'Unavailable')); }
         item.addEventListener('pointerdown', event => event.preventDefault());
         item.addEventListener('click', () => { if (!pending && generation === state.generation && ticket === epoch) choose(entry); }); list.append(item);

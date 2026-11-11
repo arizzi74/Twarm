@@ -15,14 +15,15 @@ import (
 )
 
 type params struct {
-	ThreadID        string  `json:"threadId"`
-	TurnID          string  `json:"turnId"`
-	ExpectedTurnID  string  `json:"expectedTurnId"`
-	CWD             string  `json:"cwd"`
-	Model           string  `json:"model"`
-	Effort          *string `json:"effort"`
-	ReasoningEffort *string `json:"reasoningEffort"`
-	PermissionMode  *string `json:"permissionMode"`
+	MCP             *protocol.ClaudeMCPRequest `json:"mcp"`
+	ThreadID        string                     `json:"threadId"`
+	TurnID          string                     `json:"turnId"`
+	ExpectedTurnID  string                     `json:"expectedTurnId"`
+	CWD             string                     `json:"cwd"`
+	Model           string                     `json:"model"`
+	Effort          *string                    `json:"effort"`
+	ReasoningEffort *string                    `json:"reasoningEffort"`
+	PermissionMode  *string                    `json:"permissionMode"`
 	Config          struct {
 		ReasoningEffort *string `json:"model_reasoning_effort"`
 	} `json:"config"`
@@ -110,6 +111,10 @@ func (s *server) receive(peer *peer, data []byte) {
 		}
 		s.wg.Add(1)
 		go s.runDeletion(peer, append(json.RawMessage(nil), msg.ID...), record, proc)
+		return
+	}
+	if msg.Method == "thread/mcp/status" || msg.Method == "thread/mcp/update" {
+		s.mcpRPC(peer, msg, p)
 		return
 	}
 	if msg.Method == "thread/skills/list" || msg.Method == "thread/skill/start" {

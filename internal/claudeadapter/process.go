@@ -19,7 +19,10 @@ import (
 	"github.com/iaia/telegramgw/internal/protocol"
 )
 
+var errClaudeInputBusy = errors.New("Claude input is busy; retry the status observation later")
+
 type process struct {
+	mcpGate       chan struct{} // Initialized under server.mu; serializes MCP control requests.
 	server        *server
 	threadID      string
 	cmd           *exec.Cmd
@@ -239,7 +242,7 @@ func (p *process) controlRequest(ctx context.Context, request any, stopOnWriteTi
 	value := map[string]any{"type": "control_request", "request_id": id, "request": request}
 	if !stopOnWriteTimeout {
 		if !p.writeMu.TryLock() {
-			return nil, errors.New("Claude input is busy; retry the status observation later")
+			return nil, errClaudeInputBusy
 		}
 		go func() {
 			defer p.writeMu.Unlock()

@@ -48,7 +48,7 @@ var codex = []Command{
 	{"goal", "Codex: inspect or update the task goal"},
 	{"diff", "Agent: inspect workspace changes"},
 	{"init", "Codex: ask for project instructions"},
-	{"mcp", "Codex: inspect MCP servers"},
+	{"mcp", "Agent: inspect and manage MCP connections"},
 	{"apps", "Codex: inspect available apps"},
 	{"skill", "Claude Code: list or run a skill"},
 	{"skills", "Agent: list available skills"},

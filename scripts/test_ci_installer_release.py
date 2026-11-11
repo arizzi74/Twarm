@@ -146,6 +146,16 @@ class InstallerReleaseScopeTest(unittest.TestCase):
             with self.assertRaises(POLICY.ScopeError):
                 self.validate(scope="worker-maintenance")
 
+    def test_claude_mcp_scope_excludes_other_features(self):
+        changed = POLICY.CLAUDE_MCP_ALLOWED | {f"docs/releases/{self.tag}.md"}
+        self.target(changed)
+        self.assertEqual(self.validate(scope="claude-mcp"), changed)
+        for name in ("internal/audio/audio.go", "native/whisper/source.env", "internal/worker/restart.go", "internal/registry/worker_restart.go", "go.mod", "package-lock.json", "scripts/publish-release.py", ".github/workflows/security.yml"):
+            self.setUp()
+            self.target(("internal/claudeadapter/mcp.go", name))
+            with self.assertRaises(POLICY.ScopeError):
+                self.validate(scope="claude-mcp")
+
     def test_invalid_or_nonadvancing_stable_tags_are_refused(self):
         self.target()
         for tag in ("main", "v1.2.4-rc1", "v01.2.4", "v1.2.4\n", self.baseline, "v0.9.9"):
@@ -322,11 +332,24 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         text = (ROOT / ".github/workflows/release.yml").read_text()
         job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
         self.assertIn("inputs.worker_maintenance_only", text)
-        self.assertIn("--scope worker-maintenance", text)
+        self.assertIn("scope=worker-maintenance", text)
+        self.assertIn('--scope "$scope"', text)
         for required in ("go test -race ./internal/claudeadapter", "./internal/workerrestart", "Test(TelegramWorkerRestart|WebUIWorkerRestart)", "node scripts/test-webui-worker-restart.cjs", "node scripts/test-webui.cjs"):
             self.assertIn(required, job)
         self.assertNotIn("test-admin-audio", job)
         self.assertNotIn("npm run test:browser", job)
+
+    def test_claude_mcp_modifier_requires_scope_and_affected_checks(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn('"$CLAUDE_MCP_ONLY" == \'true\' && "$WORKER_MAINTENANCE_ONLY" != \'true\'', text)
+        self.assertIn('then scope=claude-mcp', text)
+        job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
+        self.assertIn("if: needs.release-mode.outputs.claude_mcp_only == 'true'", job)
+        self.assertIn("if: needs.release-mode.outputs.claude_mcp_only != 'true'", job)
+        self.assertIn("node scripts/test-webui-claude-mcp.cjs", job)
+        self.assertIn("go test -race ./internal/claudeadapter -count=1", job)
+        self.assertIn("TestClaudeMCP|Test.*MCP|Test.*UpdateSafety", job)
+        self.assertNotIn("test-admin-audio", job)
 
     def test_native_smoke_defaults_and_cache_admission_stay_strict(self):
         for name in ("native-whisper", "native-speech"):

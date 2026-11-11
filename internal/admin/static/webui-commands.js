@@ -44,7 +44,7 @@
     command('skill', 'List or run a Claude Code skill', 'worker', '[name] [arguments]', { source: 'claude' }),
     command('hooks', 'Inspect configured lifecycle hooks', 'worker'),
     command('memories', 'View or change session memory mode', 'worker', '[enabled|disabled]', { busy: false }),
-    command('mcp', 'Inspect configured MCP servers and tools', 'worker', '[verbose]'),
+    command('mcp', 'Inspect configured MCP servers and tools', 'worker', '[arguments]'),
     command('apps', 'List available connected apps', 'worker'),
     command('plugins', 'List plugins available to this workspace', 'worker'),
     command('ps', 'List this session’s background terminals', 'worker'),

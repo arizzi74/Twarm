@@ -3,6 +3,10 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      claude_mcp_only:
+        description: With worker_maintenance_only, prove native Claude MCP scope and run only affected tests
+        type: boolean
+        default: false
       worker_maintenance_only:
         description: Prove worker startup/restart scope and run affected checks without audio inference
         type: boolean
@@ -55,6 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      claude_mcp_only: ${{ steps.scope.outputs.claude_mcp_only }}
       worker_maintenance_only: ${{ steps.scope.outputs.worker_maintenance_only }}
       webui_only: ${{ steps.scope.outputs.webui_only }}
       webui_questions_only: ${{ steps.scope.outputs.webui_questions_only }}
@@ -76,6 +81,7 @@ jobs:
           RELEASE_REF: ${{ github.ref }}
           RELEASE_COMMIT: ${{ github.sha }}
           BASELINE_TAG: ${{ inputs.baseline_tag }}
+          CLAUDE_MCP_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_mcp_only }}
           WORKER_MAINTENANCE_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.worker_maintenance_only }}
           WEBUI_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.webui_only }}
           WEBUI_QUESTIONS_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.webui_questions_only }}
@@ -85,6 +91,10 @@ jobs:
           CLAUDE_SKILLS_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_skills_only }}
           CLAUDE_SKILLS_UI_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_skills_ui_only }}
         run: |
+          if [[ "$CLAUDE_MCP_ONLY" == 'true' && "$WORKER_MAINTENANCE_ONLY" != 'true' ]]; then
+            echo 'The MCP modifier requires the guarded worker maintenance mode.' >&2
+            exit 1
+          fi
           selected=0
           for mode in "$INSTALLER_ONLY" "$CLAUDE_COMPACTION_ONLY" "$CLAUDE_USAGE_ONLY" "$CLAUDE_SKILLS_ONLY" "$WEBUI_QUESTIONS_ONLY" "$WEBUI_ONLY" "$WORKER_MAINTENANCE_ONLY"; do
             if [[ "$mode" == 'true' ]]; then selected=$((selected + 1)); fi
@@ -97,11 +107,14 @@ jobs:
             echo 'The UI-only modifier requires the scoped skills release mode.' >&2
             exit 1
           fi
-          printf 'worker_maintenance_only=false\nwebui_only=false\nwebui_questions_only=false\nclaude_skills_ui_only=false\nclaude_skills_only=false\nclaude_usage_only=false\nclaude_compaction_only=false\n' >> "$GITHUB_OUTPUT"
+          printf 'claude_mcp_only=false\nworker_maintenance_only=false\nwebui_only=false\nwebui_questions_only=false\nclaude_skills_ui_only=false\nclaude_skills_only=false\nclaude_usage_only=false\nclaude_compaction_only=false\n' >> "$GITHUB_OUTPUT"
           if [[ "$WORKER_MAINTENANCE_ONLY" == 'true' ]]; then
             test "$RELEASE_REF" = "refs/tags/$RELEASE_TAG"
-            python3 scripts/check-installer-release.py --scope worker-maintenance --repo "$RELEASE_REPO" --tag "$RELEASE_TAG" --baseline "$BASELINE_TAG" --commit "$RELEASE_COMMIT"
+            scope=worker-maintenance
+            if [[ "$CLAUDE_MCP_ONLY" == 'true' ]]; then scope=claude-mcp; fi
+            python3 scripts/check-installer-release.py --scope "$scope" --repo "$RELEASE_REPO" --tag "$RELEASE_TAG" --baseline "$BASELINE_TAG" --commit "$RELEASE_COMMIT"
             printf 'installer_only=false\nworker_maintenance_only=true\n' >> "$GITHUB_OUTPUT"
+            if [[ "$CLAUDE_MCP_ONLY" == 'true' ]]; then printf 'claude_mcp_only=true\n' >> "$GITHUB_OUTPUT"; fi
           elif [[ "$WEBUI_ONLY" == 'true' ]]; then
             test "$RELEASE_REF" = "refs/tags/$RELEASE_TAG"
             python3 scripts/check-installer-release.py --scope webui --repo "$RELEASE_REPO" --tag "$RELEASE_TAG" --baseline "$BASELINE_TAG" --commit "$RELEASE_COMMIT"
@@ -379,21 +392,33 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_ci_installer_release.py
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
       - name: Check Claude startup, cancellation and native lifecycle
+        if: needs.release-mode.outputs.claude_mcp_only != 'true'
         run: |
           go vet ./internal/claudeadapter ./internal/workerrestart ./internal/worker ./internal/registry ./internal/gateway ./internal/admin ./internal/protocol ./internal/telegramcommands ./cmd/claude-worker ./cmd/codex-worker
           go test -race ./internal/claudeadapter ./internal/workerrestart ./internal/protocol ./internal/telegramcommands ./cmd/claude-worker ./cmd/codex-worker -count=1
       - name: Check durable worker routing and restart authorization
+        if: needs.release-mode.outputs.claude_mcp_only != 'true'
         run: |
           go test -race ./internal/worker -run 'Test(Agent|Store|WorkerRestart|ClaudeWorkerIntegration|WebUICommandIsTypedScopedAndNeverReplayed)' -count=1
           go test -race ./internal/registry -run 'Test(TelegramWorkerRestart|WebUIWorkerRestart)' -count=1
           go test -race ./internal/gateway -run 'Test(WorkerRestartConfirmation|ParseTelegramWorkerRestart|ParseTelegramCommands|CodexAndGatewayNamespaces)' -count=1
           go test -race ./internal/admin -run 'Test(WebUIWorkerRestart|WebUICommands)' -count=1
+      - name: Check Claude MCP controls and lifecycle
+        if: needs.release-mode.outputs.claude_mcp_only == 'true'
+        run: |
+          go vet ./internal/claudeadapter ./internal/codexadapter ./internal/worker ./internal/protocol ./internal/telegramcommands
+          go test -race ./internal/claudeadapter -count=1
+          go test -race ./internal/worker ./internal/codexadapter ./internal/protocol ./internal/telegramcommands -run 'TestClaudeMCP|Test.*MCP|Test.*UpdateSafety|TestMenuNamesAreValidAndUnique' -count=1
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Check browser confirmation and session isolation
+        if: needs.release-mode.outputs.claude_mcp_only != 'true'
         run: |
           node scripts/test-webui-worker-restart.cjs
           node scripts/test-webui.cjs
+      - name: Check Claude MCP browser commands
+        if: needs.release-mode.outputs.claude_mcp_only == 'true'
+        run: node scripts/test-webui-claude-mcp.cjs
 
   package:
     needs: [native-whisper, native-speech]

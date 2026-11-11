@@ -716,7 +716,7 @@ func nativeObject(raw []byte) (map[string]json.RawMessage, bool) {
 func nativeReadOnlyRequest(method string) bool {
 	switch method {
 	case "server/diagnostics", "thread/list", "thread/loaded/list", "thread/read", "thread/turns/list", "thread/items/list", "thread/search", "thread/searchOccurrences", "thread/timeline/list",
-		"thread/goal/get", "thread/status/read", "thread/skills/list", "thread/attachment/list", "thread/queue/list", "thread/backgroundTerminals/list", "memory/status",
+		"thread/goal/get", "thread/status/read", "thread/skills/list", "thread/mcp/status", "thread/attachment/list", "thread/queue/list", "thread/backgroundTerminals/list", "memory/status",
 		"model/list", "modelProvider/capabilities/read", "collaborationMode/list", "experimentalFeature/list", "permissionProfile/list",
 		"config/read", "configRequirements/read", "skills/list", "hooks/list", "plugin/list", "plugin/search", "plugin/installed", "plugin/read", "plugin/skill/read", "plugin/share/list",
 		"app/list", "app/read", "app/installed", "mcpServerStatus/list", "mcpServer/resource/read", "account/rateLimits/read", "account/usage/read", "account/workspaceMessages/read",
@@ -732,7 +732,7 @@ func nativeReadOnlyRequest(method string) bool {
 func nativeSynchronousRequest(method string) bool {
 	switch method {
 	case "initialize", "server/diagnostics", "thread/list", "thread/loaded/list", "thread/turns/list", "thread/items/list", "thread/search", "thread/searchOccurrences", "thread/timeline/list", "thread/history/recover",
-		"thread/name/set", "thread/metadata/update", "thread/section/move", "thread/settings/update", "thread/memoryMode/set", "thread/readState/update", "thread/goal/get", "thread/status/read", "thread/skills/list", "thread/goal/clear", "thread/attachment/list", "memory/status",
+		"thread/name/set", "thread/metadata/update", "thread/section/move", "thread/settings/update", "thread/memoryMode/set", "thread/readState/update", "thread/goal/get", "thread/status/read", "thread/skills/list", "thread/mcp/status", "thread/mcp/update", "thread/goal/clear", "thread/attachment/list", "memory/status",
 		"thread/archive", "thread/unarchive", "thread/delete", "thread/unsubscribe", "thread/inject_items", "thread/queue/list", "thread/queue/delete", "thread/queue/reorder",
 		"thread/backgroundTerminals/list", "thread/backgroundTerminals/clean", "thread/backgroundTerminals/terminate", "turn/interrupt", "turn/settings/update",
 		"model/list", "modelProvider/capabilities/read", "collaborationMode/list", "experimentalFeature/list", "permissionProfile/list", "experimentalFeature/enablement/set",
