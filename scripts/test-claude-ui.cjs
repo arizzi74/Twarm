@@ -701,7 +701,7 @@ async function deletionChecks(browser, width) {
   };
   const slash = async command => { await page.locator('#prompt').fill(command); await page.locator('#send').click(); };
   const assertDescription = text => {
-    assert.match(text, /permanently removes this Claude conversation’s files and its MACT session data/);
+    assert.match(text, /permanently removes this Claude conversation’s files and its Twarm session data/);
     assert.match(text, /project directory and all project files will be kept/);
     assert.doesNotMatch(text, /child sessions/);
   };

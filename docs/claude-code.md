@@ -1,6 +1,6 @@
 # Claude Code workers
 
-MACT supports Claude Code through a dedicated `claude-worker` service. One
+Twarm supports Claude Code through a dedicated `claude-worker` service. One
 Claude worker manages one local Claude installation and account configuration;
 it can run multiple independent sessions. Codex continues to use `codex-worker`.
 Both workers can coexist on a host with separate enrollment identities, services,
@@ -8,7 +8,7 @@ configuration, state and update queues.
 
 ```mermaid
 flowchart LR
-  UI[Web UI and Telegram bots] <--> Gateway[MACT gateway]
+  UI[Web UI and Telegram bots] <--> Gateway[Twarm gateway]
   Gateway <-->|Authenticated outbound WSS| CW[Codex worker]
   Gateway <-->|Authenticated outbound WSS| AW[Claude Code worker]
   CW <--> Codex[Codex app-server]
@@ -30,25 +30,25 @@ sessions automatically.
 
 Install and sign in to Claude Code using its
 [official installation instructions](https://code.claude.com/docs/en/setup).
-Alternatively, configure an API key or authentication token in MACT after
+Alternatively, configure an API key or authentication token in Twarm after
 worker enrollment. Claude must already be installed for the worker's OS account.
-MACT uses an existing Claude CLI installation. After setup, it checks the configured official
+Twarm uses an existing Claude CLI installation. After setup, it checks the configured official
 release channel daily and updates supported native installations when the worker is idle.
 
 In the gateway admin console choose **Enroll worker**, then on the worker host:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup claude-worker
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup claude-worker
 ```
 
-Setup installs the latest stable MACT release. See the
+Setup installs the latest stable Twarm release. See the
 [installation guide](installation.md) for requirements and the
 [optional authenticated-first procedure](installation.md#download-and-authenticate-the-installer).
 
-On an existing MACT installation:
+On an existing Twarm installation:
 
 ```sh
-mact setup claude-worker
+twarm setup claude-worker
 ```
 
 Enter the worker name and the one-use enrollment URL. Linux setup asks whether
@@ -76,12 +76,12 @@ Use `/skill` (or `/skills`) to list user-invocable skills and custom commands
 advertised by Claude Code for the selected session. Personal, project, plugin and
 synced skills come from the native runtime under that session's working directory
 and account. Conversation and configuration controls such as `/clear`, `/compact`
-and `/model` remain on MACT's dedicated commands instead of the skill picker.
+and `/model` remain on Twarm's dedicated commands instead of the skill picker.
 
 Run `/skill NAME` or `/skill NAME arguments` to invoke a skill through Claude's
 native slash-command path. Namespaced names such as `plugin:review` are supported.
 Arguments, supporting files, permissions and background work retain native Claude
-behavior. MACT rejects unknown names before submitting a model prompt.
+behavior. Twarm rejects unknown names before submitting a model prompt.
 
 The WebUI picker has local search and an optional argument form. Typing `/skill `
 opens suggestions; choosing one fills the composer without invoking it. Telegram
@@ -115,7 +115,7 @@ configuration button, and set:
 - **Authentication:** existing Claude login, API key (`ANTHROPIC_API_KEY`), or
   authentication token (`ANTHROPIC_AUTH_TOKEN`).
 - **Permissions:** normal approval requests, accept edits, plan mode, don't ask,
-  automatic review, or an explicit bypass-permissions choice. MACT offers modes
+  automatic review, or an explicit bypass-permissions choice. Twarm offers modes
   supported by the installed CLI. Account or managed policies can further
   restrict them. Permission modes do not grant operating-system privileges.
 
@@ -155,7 +155,7 @@ resumes the same native conversation with the selected settings. A new session
 uses the worker defaults.
 
 The permissions menu describes Claude's native modes. Bypass permissions
-requires a separate confirmation. MACT verifies a non-default mode with an
+requires a separate confirmation. Twarm verifies a non-default mode with an
 isolated native control before saving it; modes disabled by Claude settings or
 organization policy return an error and preserve the existing session settings.
 If native startup reports a different mode from the requested one, the turn
@@ -167,7 +167,7 @@ which files, commands, and sudo privileges are actually available.
 
 Use **+** beside the worker to create a session with a project path, then use
 Telegram or the Web UI to send messages. Live assistant text, tool calls/results,
-approvals and clarification questions use MACT's existing session routing.
+approvals and clarification questions use Twarm's existing session routing.
 File uploads and downloads retain the worker workspace restrictions.
 
 New Claude sessions in the Web UI default to `~/CLAUDE_CODE/<session_name>`
@@ -209,7 +209,7 @@ items are cancelled with a saved history notice so they can be resent explicitly
 Use `/compact` in the Web UI or Telegram to summarize the current Claude
 conversation without creating a new session or changing its model, effort, or
 permissions. Compaction requires an idle session without queued input or pending
-approvals. MACT waits for the native result and idle lifecycle, and shows
+approvals. Twarm waits for the native result and idle lifecycle, and shows
 **Context compacted** only after Claude reports a compaction boundary. Too little
 history is shown as skipped; failures and interruptions remain visible. Automatic
 Claude compaction is also shown. The context token count uses Claude's reported
@@ -217,7 +217,7 @@ post-compaction size when available. Otherwise the old count is cleared until
 Claude next reports actual input usage.
 
 Claude background agents and commands remain part of the request that launched
-them, including agents that Claude starts in the background implicitly. MACT
+them, including agents that Claude starts in the background implicitly. Twarm
 keeps the turn active while that work runs and while the parent assembles its
 final response. Interim replies and task updates stay in the same conversation;
 queued input starts after the request finishes. Account changes and maintenance
@@ -230,7 +230,7 @@ This first integration does not provide Claude project archive/restore,
 Codex goals, Codex quotas/reset redemption, native Codex terminal
 attachment, or Codex-specific settings and plugins. These capabilities are not
 advertised for Claude workers. Session naming changes only the name displayed in
-MACT and Telegram.
+Twarm and Telegram.
 
 ### Screenshots and generated files
 
@@ -252,7 +252,7 @@ under `~/.claude/projects/` (or the configured `CLAUDE_CONFIG_DIR/projects/`),
 including its subagent transcripts and saved tool results. Other sessions and
 shared project memory are preserved.
 
-MACT also removes the worker's cached conversation, question and upload records,
+Twarm also removes the worker's cached conversation, question and upload records,
 and clears stored command content for the session. Minimal deletion markers and
 command receipts remain so a restart or repeated request cannot restore the
 deleted session. Already queued delivery events retain their original contents
@@ -297,9 +297,9 @@ indicator's tooltip. `/status` and `/usage` report the same observations in text
 The CLI's USD figure is a reported estimate, not a provider invoice. Custom
 endpoints can bill at different rates. Session cost is retained across worker
 restarts, and cumulative CLI totals are not added repeatedly. Historical costs
-that were never reported to MACT remain unavailable until the native CLI
+that were never reported to Twarm remain unavailable until the native CLI
 reports them; a crashed process can leave unreported spending unknown.
-If a native counter resets below its saved total, MACT marks the accounting as
+If a native counter resets below its saved total, Twarm marks the accounting as
 incomplete. The latest native counter appears as **Session $… (partial)** and
 keeps updating even below an older saved total. Its tooltip explains that the
 counter may omit spending before the reset, and retains the historical lower
@@ -308,7 +308,7 @@ counter, the fallback remains **Session ≥$… (partial)**. A complete historic
 total and last-turn cost remain unavailable. This qualification survives
 restarts and never becomes an account balance.
 
-During an active turn, MACT refreshes the native cost summary approximately
+During an active turn, Twarm refreshes the native cost summary approximately
 every 15 seconds, after Claude starts producing output. This is a local,
 read-only `get_session_cost` control: it submits no model prompt and makes no
 account billing request. Failed or unsupported controls keep the previous
@@ -336,7 +336,7 @@ time. The status line marks it **last known**, and its tooltip and `/status`
 show the next scheduled refresh. A first read with no prior value shows
 **API spend unavailable**. Cache values live in the worker runtime, are cleared
 when account settings change, and are not written into conversations. Native
-API spend amounts are currency minor units; MACT
+API spend amounts are currency minor units; Twarm
 converts explicit USD to dollars. Missing amounts or currencies stay unknown,
 and a missing limit is not presented as unlimited. Dollar allowances are kept
 separate from estimated session cost and provider credit balances. The native
@@ -379,7 +379,7 @@ currencies and unsupported billing periods are shown as unavailable.
 This is the configured member's effective limit, which may be inherited from
 a group or seat policy. It is separate from session cost, an organization's
 shared consumption pool, and any additional organization-wide spending ceiling.
-The API does not report the next reset timestamp, so MACT does not invent one.
+The API does not report the next reset timestamp, so Twarm does not invent one.
 API access requires an eligible Enterprise organization with usage credits
 enabled; unavailable or unauthorized responses clear the displayed observation.
 
@@ -395,12 +395,12 @@ conversation history and status notifications.
 ```sh
 claude-worker status
 claude-worker doctor
-mact update claude-worker
-mact update claude --check
-mact update claude
+twarm update claude-worker
+twarm update claude --check
+twarm update claude
 ```
 
-Worker updates use the normal signed MACT release and idle checks. They do not
+Worker updates use the normal signed Twarm release and idle checks. They do not
 invoke the Codex runtime updater or overwrite another worker's service or state.
 Claude worker maintenance also checks the official Claude Code release channel
 once per UTC day. The default channel is `latest`; an installation that explicitly
@@ -412,12 +412,12 @@ check even when the worker binary is current, and report worker and Claude runti
 outcomes separately. Their discovery result is retained across idle retries and
 updater restarts without changing the automatic daily schedule.
 
-`mact update claude` runs only runtime maintenance under the Claude worker's own
+`twarm update claude` runs only runtime maintenance under the Claude worker's own
 installation lock; `--check` inspects versions without installing or changing
 update state. Supported native installations use Claude Code's official configured
 release channel. npm, package-manager, wrapper, custom or otherwise unrecognized
 installations remain externally managed and are reported without modification.
-JSON managed settings do not by themselves prevent updates. MACT reads the
+JSON managed settings do not by themselves prevent updates. Twarm reads the
 native user settings and cached remote/machine policies to evaluate release
 channel, version bounds and update-disable environment settings, respecting
 managed-source precedence. Unrelated model, tool and permission policies remain
@@ -432,8 +432,8 @@ recovery journals, services and runtime reports. Interrupted Claude runtime
 recovery finishes before another worker release can replace the worker binary;
 normal updates resume on the following maintenance tick.
 
-MACT keeps three private copies of previous Claude executables for recovery.
-Retention removes only old native version files that MACT created and whose
+Twarm keeps three private copies of previous Claude executables for recovery.
+Retention removes only old native version files that Twarm created and whose
 contents still match its recorded hash. Independently installed or changed files
 are preserved, along with global configuration, credentials, projects and
 conversations.

@@ -1,7 +1,7 @@
 # Administrator console
 
 The administrator console is served at `/tgw/admin/` and, for navigation inside
-the installed MACT app, `/tgw/webui/admin/`. Both use the same authentication and
+the installed Twarm app, `/tgw/webui/admin/`. Both use the same authentication and
 administrative APIs. Passkeys are available by
 default; an administrator can also enable username/password sign-in for both
 this console and the Codex Web UI. The gateway enables the console with
@@ -172,7 +172,7 @@ a turn is active queues the next prompt. Codex-specific model, reasoning,
 permission, goal and account quota controls are unavailable for these workers;
 use the worker's administrator settings for runtime configuration. Updated Claude
 workers support confirmed session deletion, removing native conversation files
-and MACT worker conversation data while preserving the project directory.
+and Twarm worker conversation data while preserving the project directory.
 Project archives remain unavailable for Claude Code workers.
 
 Both sign-in screens offer an unchecked **Trust this device for 30 days**
@@ -482,7 +482,7 @@ or password verification within the last five minutes.
 Run the worker installer as the project account, without sudo:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker
 ```
 
 A fresh setup asks for a worker display name and the enrollment URL, with the

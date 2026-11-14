@@ -8,7 +8,7 @@ const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const site = path.resolve(__dirname, '../site');
 const repo = path.resolve(__dirname, '..');
-const prefix = '/MACT/';
+const prefix = '/Twarm/';
 const screenshots = process.env.SITE_SCREENSHOTS || '/tmp/telegramgw-site-preview';
 const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const server = http.createServer((request, response) => {
@@ -24,6 +24,7 @@ const server = http.createServer((request, response) => {
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = 'http://127.0.0.1:' + server.address().port;
+  assert.equal((await fetch(origin + prefix)).status, 200, 'The local preview serves the repository Pages entry point');
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({ colorScheme: 'dark', permissions: ['clipboard-read', 'clipboard-write'], reducedMotion: 'reduce' });
@@ -37,24 +38,26 @@ const server = http.createServer((request, response) => {
       await page.setViewportSize({ width, height: width <= 390 ? 844 : 1000 });
       await page.goto(origin + prefix);
       await page.locator('h1').waitFor();
-      assert.equal(await page.title(), 'MACT — Multi Agent Control Tower');
-      assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), 'https://arizzi74.github.io/MACT/');
-      assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), 'https://arizzi74.github.io/MACT/assets/screenshots/webui-desktop.png');
+      assert.equal(await page.title(), 'Twarm — Coding agent control hub');
+      assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), 'https://arizzi74.github.io/Twarm/');
+      assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), 'https://arizzi74.github.io/Twarm/assets/screenshots/webui-desktop.png');
       assert.match(await page.locator('h1').innerText(), /Your coding agent\s+control hub/);
       assert.match(await page.locator('.hero-description').textContent(), /^Boost your development workflow with a single control hub for coding agents\./);
       assert.match(await page.locator('.hero-description').textContent(), /manage multiple coding agent installations across servers/i);
       assert.match(await page.locator('.hero-description').textContent(), /Codex and Claude Code are supported today through dedicated workers/);
-      assert.equal(await page.locator('.release-pill').getAttribute('href'), 'https://github.com/arizzi74/MACT/releases/tag/v0.7.0');
-      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /MACT 0\.7\.0.*Codex and Claude Code/);
+      assert.equal(await page.locator('.release-pill').getAttribute('href'), 'https://github.com/arizzi74/Twarm/releases/tag/v0.7.32');
+      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /Twarm 0\.7\.32.*Codex and Claude Code/);
       assert.match(await page.locator('#agents').textContent(), /Claude follow-ups are queued, not steered into the active turn/);
       assert.match(await page.locator('#agents').textContent(), /terminal attachment and project archive\/restore remain Codex-only/);
-      assert.equal(await page.getByRole('link', { name: 'MACT · Multi Agent Control Tower home', exact: true }).count(), 1);
-      assert.equal(await page.locator('.gateway-node > strong').textContent(), 'MACT Gateway');
-      assert.equal(await page.locator('.worker-node > strong').textContent(), 'MACT Worker');
+      assert.equal(await page.getByRole('link', { name: 'Twarm · Coding agent control hub home', exact: true }).count(), 1);
+      assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('src'), 'assets/twarm_logo+name.svg');
+      assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('alt'), 'Twarm');
+      assert.equal(await page.locator('.gateway-node > strong').textContent(), 'Twarm Gateway');
+      assert.equal(await page.locator('.worker-node > strong').textContent(), 'Twarm Worker');
       await page.evaluate(async () => { for (const image of document.images) image.loading = 'eager'; await Promise.all([...document.images].map(image => image.decode())); });
-      const layout = await page.evaluate(() => ({ width: innerWidth, pageWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth, images: [...document.images].map(image => ({ alt: image.alt, loaded: image.naturalWidth > 0, width: image.clientWidth, height: image.clientHeight, ratio: image.naturalWidth / image.naturalHeight })) }));
+      const layout = await page.evaluate(() => ({ width: innerWidth, pageWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth, images: [...document.images].map(image => ({ alt: image.alt, brand: image.matches('.brand-wordmark,.brand-icon'), loaded: image.naturalWidth > 0, width: image.clientWidth, height: image.clientHeight, ratio: image.naturalWidth / image.naturalHeight })) }));
       assert.ok(layout.pageWidth <= width + 1 && layout.bodyWidth <= width + 1, `Horizontal overflow at ${width}: ${JSON.stringify(layout)}`);
-      for (const image of layout.images) { assert.ok(image.loaded && image.alt.length > 20, 'Screenshot missing or inaccessible'); assert.ok(Math.abs(image.width / image.height - image.ratio) < .02, 'Screenshot aspect ratio distorted'); }
+      for (const image of layout.images) { assert.ok(image.loaded, 'Image failed to load'); if (!image.brand) assert.ok(image.alt.length > 20, 'Screenshot description missing'); assert.ok(Math.abs(image.width / image.height / image.ratio - 1) < .02, 'Image aspect ratio distorted: ' + JSON.stringify(image)); }
       assert.equal(await page.locator('h1').count(), 1);
       assert.equal(await page.locator('#screenshots').count(), 1);
       if (width === 1440 || width === 390) {
@@ -67,7 +70,7 @@ const server = http.createServer((request, response) => {
     for (const link of links) {
       if (link.startsWith('#')) { if (link.length > 1) assert.equal(await page.locator('[id="' + link.slice(1) + '"]').count(), 1, 'Broken anchor ' + link); continue; }
       if (/^https:\/\//.test(link)) {
-        assert.ok(link.startsWith('https://github.com/arizzi74/MACT') || link === 'https://code.claude.com/docs/en/setup' || link === 'https://arizzi74.github.io/MACT/', 'Unexpected outbound link: ' + link);
+        assert.ok(link.startsWith('https://github.com/arizzi74/Twarm') || link === 'https://code.claude.com/docs/en/setup' || link === 'https://arizzi74.github.io/Twarm/', 'Unexpected outbound link: ' + link);
         const local = link.split('/blob/main/')[1] || link.split('/tree/main/')[1];
         if (local) assert.ok(fs.existsSync(path.join(repo, local.split('#')[0])), 'Broken repository documentation link: ' + link);
         continue;
@@ -82,12 +85,12 @@ const server = http.createServer((request, response) => {
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected.trim());
       assert.equal(await button.getAttribute('data-copied'), 'true');
     }
-    assert.equal(await page.locator('#gateway-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sudo sh -s -- setup gateway');
-    assert.equal(await page.locator('#worker-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker');
-    assert.equal(await page.locator('#claude-worker-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup claude-worker');
+    assert.equal(await page.locator('#gateway-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- setup gateway');
+    assert.equal(await page.locator('#worker-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker');
+    assert.equal(await page.locator('#claude-worker-command').innerText(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup claude-worker');
     assert.match(await page.locator('#install').textContent(), /updates supported native Claude CLI installations through their configured official release channel when idle/);
     assert.match(await page.locator('#install').textContent(), /optional authenticated-first procedure/);
-    assert.doesNotMatch(await page.locator('#install').textContent(), /MACT_INSTALLER_DIR|Requires a preinstalled trusted GitHub CLI/);
+    assert.doesNotMatch(await page.locator('#install').textContent(), /MACT_INSTALLER_DIR|TWARM_INSTALLER_DIR|Requires a preinstalled trusted GitHub CLI/);
     assert.match(await page.locator('#install').textContent(), /checksums/);
     await page.evaluate(() => Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('Clipboard unavailable')) }));
     await page.getByRole('button', { name: 'Copy worker install command', exact: true }).click();
@@ -101,6 +104,7 @@ const server = http.createServer((request, response) => {
     assert.deepEqual(errors, []); assert.deepEqual(failed, []); assert.deepEqual(external, []);
     const capture = JSON.parse(fs.readFileSync(path.join(site, 'assets/screenshots/capture.json'), 'utf8'));
     assert.equal(capture.demo_data, true); assert.ok(!Number.isNaN(Date.parse(capture.captured_at)));
+    assert.equal(capture.product, 'Twarm'); assert.equal(capture.release, '0.7.32');
     console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, and zero external requests.');
     console.log('Page previews: ' + screenshots);
   } finally { await browser.close(); }

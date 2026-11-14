@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,16 +14,16 @@ import (
 
 func TestManagementCommandLayoutsPreserveInstallationPaths(t *testing.T) {
 	for _, platform := range []struct{ component, system, home, command, alias string }{
-		{"gateway", "linux", "", "/usr/local/bin/codex-telegramgw", "/usr/local/bin/mact"},
-		{"worker", "linux", "/home/worker", "/home/worker/.local/bin/codex-telegramgw", "/home/worker/.local/bin/mact"},
-		{"worker", "darwin", "/Users/worker", "/Users/worker/.local/bin/codex-telegramgw", "/Users/worker/.local/bin/mact"},
+		{"gateway", "linux", "", "/usr/local/bin/codex-telegramgw", "/usr/local/bin/twarm"},
+		{"worker", "linux", "/home/worker", "/home/worker/.local/bin/codex-telegramgw", "/home/worker/.local/bin/twarm"},
+		{"worker", "darwin", "/Users/worker", "/Users/worker/.local/bin/codex-telegramgw", "/Users/worker/.local/bin/twarm"},
 	} {
 		t.Run(platform.component+"-"+platform.system, func(t *testing.T) {
 			l, err := newLayout(platform.component, platform.system, "arm64", platform.home)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if l.Command != platform.command || l.AliasCommand != platform.alias || filepath.Base(l.Manager) != "codex-telegramgw" || filepath.Base(l.Binary) != "codex-"+platform.component {
+			if l.Command != platform.command || l.AliasCommand != platform.alias || l.CompatibilityCommand != filepath.Join(filepath.Dir(platform.alias), "mact") || filepath.Base(l.Manager) != "codex-telegramgw" || filepath.Base(l.Binary) != "codex-"+platform.component {
 				t.Fatalf("management alias changed canonical installation paths: %+v", l)
 			}
 		})
@@ -39,7 +40,7 @@ func TestManagerCommandsShareOneExecutableAcrossUpdates(t *testing.T) {
 				if err := (&Manager{}).InstallManager(l, source); err != nil {
 					t.Fatal(err)
 				}
-				for _, command := range []string{l.Command, l.AliasCommand} {
+				for _, command := range []string{l.Command, l.AliasCommand, l.CompatibilityCommand} {
 					if link, err := os.Readlink(command); err != nil || link != l.Manager {
 						t.Fatalf("%s links to %q: %v", command, link, err)
 					}
@@ -49,7 +50,7 @@ func TestManagerCommandsShareOneExecutableAcrossUpdates(t *testing.T) {
 				}
 			}
 			entries, err := os.ReadDir(l.Bin)
-			if err != nil || len(entries) != 2 {
+			if err != nil || len(entries) != 3 {
 				t.Fatalf("duplicate management commands or temporary files: %v, %v", entries, err)
 			}
 			original, err := os.Stat(l.Command)
@@ -182,12 +183,81 @@ func TestUpdateRestoresManagementAliasBeforeServiceRestart(t *testing.T) {
 	}
 }
 
-func TestManagementHelpUsesMACTAndExplainsCompatibility(t *testing.T) {
+func TestManagementHelpUsesTwarmAndExplainsCompatibility(t *testing.T) {
 	var output, errorOutput bytes.Buffer
 	if code := Execute(context.Background(), []string{"--help"}, &output, &errorOutput); code != 0 || errorOutput.Len() != 0 {
 		t.Fatalf("help returned %d: %s", code, errorOutput.String())
 	}
-	if !strings.Contains(output.String(), "Install and update MACT") || !strings.Contains(output.String(), "mact update gateway|worker") || !strings.Contains(output.String(), "codex-telegramgw command remains supported") {
-		t.Fatalf("help omits MACT or compatibility command: %s", output.String())
+	if !strings.Contains(output.String(), "Install and update Twarm") || !strings.Contains(output.String(), "twarm update gateway|worker") || !strings.Contains(output.String(), "mact and codex-telegramgw commands remain supported") {
+		t.Fatalf("help omits Twarm or compatibility commands: %s", output.String())
+	}
+}
+
+func TestTwarmAliasRollbackPreservesBothLegacyAndForeignCommands(t *testing.T) {
+	for _, foreign := range []bool{false, true} {
+		t.Run(fmt.Sprint(foreign), func(t *testing.T) {
+			l, packages, release := updateFixture(t, "gateway")
+			l.CompatibilityCommand = l.AliasCommand
+			l.AliasCommand = filepath.Join(l.Bin, "twarm")
+			if err := os.Symlink("codex-telegramgw", l.CompatibilityCommand); err != nil {
+				t.Fatal(err)
+			}
+			if foreign {
+				platformWrite(t, l.AliasCommand, "unrelated command", 0755)
+			}
+			check := func() {
+				t.Helper()
+				if link, err := os.Readlink(l.CompatibilityCommand); err != nil || link != "codex-telegramgw" {
+					t.Fatalf("legacy alias not restored: %q %v", link, err)
+				}
+				if foreign {
+					if got := updateRead(t, l.AliasCommand); got != "unrelated command" {
+						t.Fatal("foreign command replaced", got)
+					}
+				} else if _, err := os.Lstat(l.AliasCommand); !errors.Is(err, os.ErrNotExist) {
+					t.Fatal("new Twarm alias survived rollback", err)
+				}
+			}
+			m := &Manager{Run: func(_ context.Context, args ...string) (CommandResult, error) {
+				if args[0] == "runuser" {
+					return CommandResult{ExitCode: 1}, nil
+				}
+				if args[0] != "systemctl" {
+					t.Fatalf("unexpected command: %v", args)
+				}
+				if args[1] == "start" {
+					check()
+				}
+				return CommandResult{}, nil
+			}}
+			if err := m.ApplyUpdate(t.Context(), l, packages, release, false); err == nil {
+				t.Fatal("migration failure ignored")
+			}
+			check()
+		})
+	}
+}
+
+func TestTwarmInstallationPreservesBothOccupiedAliases(t *testing.T) {
+	l := platformWorker(t, "linux")
+	for _, alias := range []string{l.AliasCommand, l.CompatibilityCommand} {
+		platformWrite(t, alias, "foreign "+filepath.Base(alias), 0755)
+	}
+	source := filepath.Join(t.TempDir(), "manager")
+	platformWrite(t, source, "new manager", 0755)
+	var output bytes.Buffer
+	if err := (&Manager{Out: &output}).InstallManager(l, source); err != nil {
+		t.Fatal(err)
+	}
+	for _, alias := range []string{l.AliasCommand, l.CompatibilityCommand} {
+		if got := updateRead(t, alias); got != "foreign "+filepath.Base(alias) {
+			t.Fatal("foreign alias replaced", alias, got)
+		}
+		if !strings.Contains(output.String(), alias+" is already occupied") {
+			t.Fatal("missing alias collision warning", output.String())
+		}
+	}
+	if got := updateRead(t, l.Command); got != "new manager" {
+		t.Fatal("canonical command not installed", got)
 	}
 }

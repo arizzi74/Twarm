@@ -1,11 +1,15 @@
 {
-  "captured_at": "2026-10-22T18:07:55.158Z",
+  "captured_at": "2026-11-14T11:57:50.752Z",
+  "product": "Twarm",
+  "release": "0.7.32",
   "demo_data": true,
-  "description": "Actual embedded WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.",
+  "description": "Actual embedded Twarm WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.",
   "source_sha256": {
-    "webui.html": "27af7a8e84780035ab8718f6fa35d8a550bb3664ceecbc5a6bce91c073c479be",
-    "webui.css": "d287f0c037992d024cb451bafadbdbe14c1ad9934318c739c3567102ce7711b2",
-    "webui.js": "63ee1a421508deaf637aa25e4e7fcc23371148f54f64ab9aec6fc2fb2fc87f7a"
+    "webui.html": "9c2ee22d8e11fd17f14bbaf75754fb68163466647ae31fc7e14574d696e7d503",
+    "webui.css": "ca4326557fdc47a439296e42f9cd9e2f455742c765a2364a1a1208cec835887a",
+    "webui.js": "0b0f0cbb32020eeb6f9f6147f629997a0261a226419fa927debd898d8f12fde5",
+    "twarm_logo.svg": "65f6bacb03bb028d2e47f716645cace6a627ecd609fe95b0a1ea7ef539dd29d8",
+    "twarm_logo+name.svg": "2144658daf5039eb700564a9033201aa82f1f4ed533a61bfc933ab178ef943df"
   },
   "images": {
     "webui-desktop.png": {

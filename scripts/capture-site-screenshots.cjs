@@ -38,20 +38,22 @@ const turns = [
 ];
 
 async function prepare(page, pendingQuestions = true) {
-  const errors = [];
+  const errors = [], unexpectedRequests = [], externalRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.clock.install({ time: new Date(now * 1000) });
   await page.context().addCookies([{ name: '__Host-telegramgw-csrf', value: 'fictional-demo-csrf', url: 'https://webui.example.test/', secure: true, sameSite: 'Strict' }]);
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
-    if (url.origin !== 'https://webui.example.test') return route.abort('blockedbyclient');
+    if (url.origin !== 'https://webui.example.test') { externalRequests.push(url.href); return route.abort('blockedbyclient'); }
     const json = data => route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
-    if (url.pathname === '/tgw/api/v1/admin/session') return json({ authenticated: true, session_id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', owner_id: 'screenshot-owner', server_time: new Date().toISOString(), expires_at: new Date(Date.now() + 8 * 3600000).toISOString(), reauthenticated_at: new Date().toISOString() });
+    if (url.pathname === '/tgw/api/v1/admin/login/options') return json({ passkey: true, password: false });
+    if (url.pathname === '/tgw/api/v1/admin/session') return json({ authenticated: true, session_id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', owner_id: 'screenshot-owner', authentication_method: 'passkey', server_time: new Date(now * 1000).toISOString(), expires_at: new Date((now + 8 * 3600) * 1000).toISOString(), reauthenticated_at: new Date(now * 1000).toISOString() });
     if (url.pathname === '/tgw/api/v1/webui/sessions') return json({ sessions, workers, runtimes });
     if (url.pathname === '/tgw/api/v1/webui/telegram-bots') return json({ revision: 'demo-bots', bots: [] });
+    if (url.pathname === '/tgw/api/v1/webui/question-answers') return json({ answers: [] });
     if (url.pathname === '/tgw/api/v1/webui/push/config') return json({ supported: true, public_key: 'fictional-demo-public-key', subscribed: false, scope: 'all' });
     let name = url.pathname.endsWith('/diagram-renderer') ? 'webui-mermaid-frame.html' : url.pathname === '/tgw/webui/' ? 'webui.html' : url.pathname.endsWith('/manifest.webmanifest') ? 'webui-manifest.webmanifest' : path.basename(url.pathname);
-    if (!/^(webui[\w.-]*|session-auth)\.(html|js|css|svg|png|webmanifest)$/.test(name) || !fs.existsSync(path.join(assets, name))) return route.fulfill({ status: 404, body: 'Not part of the demo fixture' });
+    if (!/^(webui[\w.-]*|session-auth|twarm_logo(?:\+name)?)\.(html|js|css|svg|png|webmanifest)$/.test(name) || !fs.existsSync(path.join(assets, name))) { unexpectedRequests.push(url.pathname); return route.fulfill({ status: 404, body: 'Not part of the demo fixture' }); }
     const mime = { html: 'text/html', js: 'text/javascript', css: 'text/css', svg: 'image/svg+xml', png: 'image/png', webmanifest: 'application/manifest+json' }[name.split('.').pop()];
     const headers = name === 'webui-mermaid-frame.html' ? { 'Content-Security-Policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'none'; object-src 'none'; connect-src 'none'; script-src https://webui.example.test/tgw/webui/static/webui-mermaid-runtime.js; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; frame-src 'none'; worker-src 'none'; sandbox allow-scripts" } : {};
     return route.fulfill({ contentType: mime, headers, body: fs.readFileSync(path.join(assets, name)) });
@@ -75,6 +77,7 @@ async function prepare(page, pendingQuestions = true) {
       send(raw) {
         const request = JSON.parse(raw); let result = {};
         if (request.method === 'thread/resume') result = { thread: { id: request.params.threadId }, model: 'gpt-6-astra', reasoningEffort: 'high' };
+        else if (request.method === 'thread/goal/get') result = { goal: null };
         else if (request.method === 'thread/items/list') result = { data: turns.flatMap(turn => [...turn.items].reverse().map(item => ({ turnId: turn.id, item: { ...item, createdAt: turn.startedAt } }))), nextCursor: null };
         else if (request.method === 'thread/turns/list') result = { data: turns.map(({ items, ...turn }) => ({ ...turn, items: [] })), nextCursor: null };
         else if (request.method === 'gateway/questions') result = { questions: [] };
@@ -87,8 +90,9 @@ async function prepare(page, pendingQuestions = true) {
     window.WebSocket = FixtureSocket;
   }, { sessions, turns, now, pendingQuestions });
   await page.goto('https://webui.example.test/tgw/webui/');
-  assert.equal(await page.title(), 'MACT · Multi Agent Control Tower');
-  assert.equal(await page.locator('.sidebar-heading .brand strong').textContent(), 'MACT');
+  assert.equal(await page.title(), 'Twarm · Coding agent control hub');
+  assert.equal(await page.locator('.sidebar-heading .brand img').getAttribute('alt'), 'Twarm');
+  assert.equal(await page.locator('.sidebar-heading .brand img').evaluate(image => image.complete && image.naturalWidth > 0), true, 'The supplied Twarm wordmark loads');
   await page.locator('.session-button[data-session-id="demo-storefront"]').waitFor({ state: 'attached' });
   // Select through the actual interface, including its mobile drawer.
   if (page.viewportSize().width <= 650) await page.locator('#show-sessions').click();
@@ -101,6 +105,8 @@ async function prepare(page, pendingQuestions = true) {
   assert.equal(await page.locator('#toggle-notifications').textContent(), 'Enable notifications', await page.locator('#notifications-status').textContent());
   assert.equal(await page.locator('#turn-state').innerText(), 'Working');
   assert.deepEqual(errors, []);
+  assert.deepEqual(unexpectedRequests, [], 'All screenshot requests are covered by fictional fixtures');
+  assert.deepEqual(externalRequests, [], 'Screenshot capture never contacts an external service');
   return errors;
 }
 
@@ -121,8 +127,8 @@ async function prepare(page, pendingQuestions = true) {
     assert.equal(await mobile.locator('.session-button[data-activity="running"]').count(), 2);
     await mobile.screenshot({ path: path.join(output, 'webui-mobile-sessions.png'), animations: 'disabled' });
     const hashes = {};
-    for (const name of ['webui.html', 'webui.css', 'webui.js']) hashes[name] = crypto.createHash('sha256').update(fs.readFileSync(path.join(assets, name))).digest('hex');
-    fs.writeFileSync(path.join(output, 'capture.json'), JSON.stringify({ captured_at: new Date().toISOString(), demo_data: true, description: 'Actual embedded WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.', source_sha256: hashes, images: { 'webui-desktop.png': { width: 1440, height: 980 }, 'webui-mobile.png': { width: 390, height: 844 }, 'webui-mobile-sessions.png': { width: 390, height: 844 } } }, null, 2) + '\n');
+    for (const name of ['webui.html', 'webui.css', 'webui.js', 'twarm_logo.svg', 'twarm_logo+name.svg']) hashes[name] = crypto.createHash('sha256').update(fs.readFileSync(path.join(assets, name))).digest('hex');
+    fs.writeFileSync(path.join(output, 'capture.json'), JSON.stringify({ captured_at: new Date().toISOString(), product: 'Twarm', release: '0.7.32', demo_data: true, description: 'Actual embedded Twarm WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.', source_sha256: hashes, images: { 'webui-desktop.png': { width: 1440, height: 980 }, 'webui-mobile.png': { width: 390, height: 844 }, 'webui-mobile-sessions.png': { width: 390, height: 844 } } }, null, 2) + '\n');
     console.log('Captured actual desktop, mobile conversation, and mobile session drawer screenshots with fictional demo data.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

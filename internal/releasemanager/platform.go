@@ -76,7 +76,8 @@ func newLayout(component, system, architecture, home string) (*Layout, error) {
 		l.Lock = filepath.Join(home, ".local/state/claude-worker/update.lock")
 		l.Backups = filepath.Join(home, ".local/state/claude-worker/updates")
 	}
-	l.AliasCommand = filepath.Join(filepath.Dir(l.Command), "mact")
+	l.AliasCommand = filepath.Join(filepath.Dir(l.Command), "twarm")
+	l.CompatibilityCommand = filepath.Join(filepath.Dir(l.Command), "mact")
 	l.Binary = filepath.Join(l.Bin, componentBinary(l))
 	l.Unit = filepath.Join(l.UnitDir, componentBinary(l)+".service")
 	return l, nil
@@ -230,7 +231,7 @@ func installManagerLink(l *Layout, command string) error {
 	return SyncDir(filepath.Dir(command))
 }
 
-// InstallManager keeps the original command and adds the MACT name, both linked
+// InstallManager keeps compatibility commands and adds the Twarm name, all linked
 // to the same native manager. An occupied optional alias does not block updates.
 func (m *Manager) InstallManager(l *Layout, source string) error {
 	available, err := managerCommandAvailable(l, l.Command)
@@ -250,21 +251,25 @@ func (m *Manager) InstallManager(l *Layout, source string) error {
 }
 
 func (m *Manager) installManagerAlias(l *Layout) error {
-	if l.AliasCommand == "" || l.AliasCommand == l.Command || l.AliasCommand == l.Manager {
-		return nil
-	}
-	if err := installManagerLink(l, l.AliasCommand); err != nil {
-		if !errors.Is(err, errManagerCommandOccupied) {
-			return err
+	for _, alias := range []string{l.AliasCommand, l.CompatibilityCommand} {
+		if alias == "" || alias == l.Command || alias == l.Manager {
+			continue
 		}
-		m.warnManagerAliasOccupied(l)
+		if err := installManagerLink(l, alias); err != nil {
+			if !errors.Is(err, errManagerCommandOccupied) {
+				return err
+			}
+			copy := *l
+			copy.AliasCommand = alias
+			m.warnManagerAliasOccupied(&copy)
+		}
 	}
 	return nil
 }
 
 func (m *Manager) warnManagerAliasOccupied(l *Layout) {
 	if m.Out != nil {
-		fmt.Fprintf(m.Out, "Warning: management alias %s is already occupied; kept the existing command. Use %s for MACT administration.\n", l.AliasCommand, l.Command)
+		fmt.Fprintf(m.Out, "Warning: management alias %s is already occupied; kept the existing command. Use %s for Twarm administration.\n", l.AliasCommand, l.Command)
 	}
 }
 
@@ -724,8 +729,8 @@ func (m *Manager) AutoUpdate(ctx context.Context, l *Layout, enabled bool) error
 	if l.System == "linux" {
 		prefix := systemctlPrefix(l)
 		if enabled {
-			service := "[Unit]\nDescription=Update MACT " + l.Component + " from GitHub Releases\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=oneshot\nExecStart=" + l.Command + " update " + componentCommand(l) + "\nSuccessExitStatus=75\nUMask=0077\nTimeoutStartSec=15min\n"
-			timer := "[Unit]\nDescription=Check daily for MACT " + l.Component + " releases\n\n[Timer]\nOnCalendar=daily\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n"
+			service := "[Unit]\nDescription=Update Twarm " + l.Component + " from GitHub Releases\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=oneshot\nExecStart=" + l.Command + " update " + componentCommand(l) + "\nSuccessExitStatus=75\nUMask=0077\nTimeoutStartSec=15min\n"
+			timer := "[Unit]\nDescription=Check daily for Twarm " + l.Component + " releases\n\n[Timer]\nOnCalendar=daily\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n"
 			if err := AtomicWrite(filepath.Join(l.UnitDir, label+".service"), []byte(service), 0644, nil); err != nil {
 				return err
 			}

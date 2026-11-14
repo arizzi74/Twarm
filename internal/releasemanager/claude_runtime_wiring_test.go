@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,6 +54,8 @@ func newClaudeWiringFixture(t *testing.T) *claudeWiringFixture {
 	}
 	m.HTTP.Transport = coreRoundTripper(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.String() {
+		case "https://api.github.com/repositories/1369450599":
+			return coreResponse(r, []byte(fmt.Sprintf(`{"id":%d,"full_name":%q}`, officialRepositoryID, DefaultRepo))), nil
 		case claudeLatestURL, claudeReleaseBaseURL + "/stable":
 			if r.URL.String() != claudeReleaseBaseURL+"/"+f.channel {
 				t.Fatalf("wrong configured Claude channel: %s", r.URL)

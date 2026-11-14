@@ -196,7 +196,7 @@ itemTimes['timestamp-older-completed'] = { startedAtMs: null, completedAtMs: tim
       const command = request.command;
       return route.fulfill({ status: authStatus !== 200 ? authStatus : command === 'tgstatus' ? gatewayStatusCode : 200, contentType: 'application/json', body: JSON.stringify({ command, text: command === 'tgupdateworkers' ? 'Linux worker: update queued after active turns finish.' : command === 'tginstances' ? 'Linux worker / Primary Codex · online' : gatewayStatusText, workers: command === 'tgupdateworkers' ? gatewayUpdateWorkers.map(worker => ({ ...worker, state: 'queued' })) : gatewayUpdateWorkers, gateway_version: '0.5.test' }) });
     }
-    const staticFiles = ['session-auth.js', 'session-auth.css', 'webui-drafts.js', 'webui-files.js', 'webui-format.js', 'webui-diagrams.js', 'webui-mermaid-runtime.js', 'webui-commands.js', 'webui-command-ui.js', 'webui-notifications.js', 'webui.js', 'webui.css', 'webui-icon.svg', 'webui-icon-180.png', 'webui-icon-192.png', 'webui-icon-512.png'];
+    const staticFiles = ['session-auth.js', 'session-auth.css', 'webui-drafts.js', 'webui-files.js', 'webui-format.js', 'webui-diagrams.js', 'webui-mermaid-runtime.js', 'webui-commands.js', 'webui-command-ui.js', 'webui-notifications.js', 'webui.js', 'webui.css', 'webui-icon.svg', 'twarm_logo.svg', 'twarm_logo+name.svg', 'webui-icon-180.png', 'webui-icon-192.png', 'webui-icon-512.png'];
     const filename = url.pathname.endsWith('/diagram-renderer') ? 'webui-mermaid-frame.html' : url.pathname.endsWith('/manifest.webmanifest') ? 'webui-manifest.webmanifest' : staticFiles.find(name => url.pathname.endsWith('/' + name)) || 'webui.html';
     const contentType = filename.endsWith('.js') ? 'text/javascript' : filename.endsWith('.css') ? 'text/css' : filename.endsWith('.png') ? 'image/png' : filename.endsWith('.svg') ? 'image/svg+xml' : filename.endsWith('.webmanifest') ? 'application/manifest+json' : 'text/html';
     const csp = filename === 'webui-mermaid-frame.html' ? "default-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'none'; object-src 'none'; connect-src 'none'; script-src https://webui.test/tgw/webui/static/webui-mermaid-runtime.js; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; frame-src 'none'; worker-src 'none'; sandbox allow-scripts" : "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
@@ -519,10 +519,13 @@ itemTimes['timestamp-older-completed'] = { startedAtMs: null, completedAtMs: tim
     listedSessions = [];
     await page.goto('https://webui.test/tgw/webui/');
     await page.waitForSelector('.session-create[data-create-worker-id="fresh"]');
-    assert.equal(await page.title(), 'MACT · Multi Agent Control Tower');
-    assert.equal(await page.locator('.sidebar-heading .brand strong').textContent(), 'MACT');
-    assert.equal(await page.locator('#session-title').textContent(), 'MACT');
-    assert.equal(await page.locator('meta[name="apple-mobile-web-app-title"]').getAttribute('content'), 'MACT');
+    assert.equal(await page.title(), 'Twarm · Coding agent control hub');
+    assert.equal(await page.locator('.sidebar-heading .brand img').getAttribute('alt'), 'Twarm');
+    assert.equal(await page.locator('.sidebar-heading .brand img').getAttribute('src'), '/tgw/webui/static/twarm_logo+name.svg');
+    assert.equal(await page.locator('.sidebar-heading .brand img').evaluate(image => image.complete && image.naturalWidth > 0), true, 'The supplied wordmark loads as a standalone SVG');
+    assert.equal(await page.locator('#empty .welcome-mark').evaluate(image => image.complete && image.naturalWidth > 0), true, 'The supplied icon loads in the welcome screen');
+    assert.equal(await page.locator('#session-title').textContent(), 'Twarm');
+    assert.equal(await page.locator('meta[name="apple-mobile-web-app-title"]').getAttribute('content'), 'Twarm');
     assert.equal(await page.locator('#prompt').getAttribute('placeholder'), 'Ask Codex to do anything', 'The composer retains the supported runtime name');
     assert.equal(await page.locator('.session-group').count(), workers.length, 'Zero-session workers have independent sidebar headings');
     assert.equal(await page.locator('.session-button').count(), 0);
@@ -1744,7 +1747,7 @@ itemTimes['timestamp-older-completed'] = { startedAtMs: null, completedAtMs: tim
       await page.locator('#prompt').fill(command); await page.locator('#send').click();
       assert.equal(await page.locator('#command-panel').isHidden(), true, command + ' closes after updating the browser setting');
     }
-    assert.equal(await page.title(), 'MACT · Multi Agent Control Tower', 'Resetting a custom browser title restores the product name');
+    assert.equal(await page.title(), 'Twarm · Coding agent control hub', 'Resetting a custom browser title restores the product name');
     await page.evaluate(() => { window.testHoldCommand = true; });
     await page.locator('#prompt').fill('/model codex-model low');
     await page.locator('#send').click();
@@ -2813,7 +2816,7 @@ itemTimes['timestamp-older-completed'] = { startedAtMs: null, completedAtMs: tim
     const exported = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download loaded conversation', exact: true }).click();
     const downloadedConversation = await exported;
-    assert.equal(downloadedConversation.suggestedFilename(), 'mact-conversation.md');
+    assert.equal(downloadedConversation.suggestedFilename(), 'twarm-conversation.md');
     const exportContent = fs.readFileSync(await downloadedConversation.path(), 'utf8');
     assert.match(exportContent, /Turn started: 2026-10-02T18:21:00\.000Z/, 'Exports preserve turn-fallback provenance');
     assert.match(exportContent, /Completed: 2026-10-02T18:45:00\.456Z/, 'Exports preserve completion-only provenance');

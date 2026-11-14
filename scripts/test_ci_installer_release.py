@@ -75,6 +75,20 @@ class InstallerReleaseScopeTest(unittest.TestCase):
             with self.subTest(arguments=arguments), self.assertRaises(POLICY.ScopeError):
                 self.validate(**{"scope": "claude-compaction", **arguments})
 
+    def test_twarm_scope_requires_exact_reviewed_files_and_immutable_release_boundary(self):
+        changed = POLICY.TWARM_MIGRATION_ALLOWED | {f"docs/releases/{self.tag}.md"}
+        self.target(changed)
+        self.assertEqual(self.validate(scope="twarm-migration"), changed)
+        for arguments in ({"latest": "v1.2.2"}, {"commit": "a" * 40}, {"tag": self.baseline}):
+            with self.assertRaises(POLICY.ScopeError):
+                self.validate(scope="twarm-migration", **arguments)
+        for name in ("go.mod", "package-lock.json", "internal/audio/audio.go", "internal/voice/encode.go",
+                     "internal/worker/worker.go", "scripts/publish-release.py", ".github/workflows/security.yml"):
+            self.setUp()
+            self.target(("internal/releasemanager/repository.go", name))
+            with self.assertRaises(POLICY.ScopeError):
+                self.validate(scope="twarm-migration")
+
     def test_archive_scope_accepts_only_archive_implementation_and_release_controls(self):
         changed = POLICY.ARCHIVE_COMPATIBILITY_ALLOWED | {f"docs/releases/{self.tag}.md"}
         self.target(changed)
@@ -249,6 +263,7 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
             "questions": ("webui_questions_only", {"webui-question-tests"}),
             "webui": ("webui_only", {"webui-tests"}),
             "worker-maintenance": ("worker_maintenance_only", {"worker-maintenance-tests"}),
+            "twarm-migration": (("worker_maintenance_only", "twarm_migration_only"), {"worker-maintenance-tests"}),
             "archive-compatibility": (("worker_maintenance_only", "archive_compatibility_only"), {"worker-maintenance-tests", "native-session-archive"}),
         }
         def permits(flags, results):
@@ -348,6 +363,17 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         self.assertNotIn("test-admin-audio", usage)
         self.assertIn("needs.release-mode.outputs.claude_usage_only == 'false'", gate)
         self.assertIn("needs.release-mode.outputs.claude_usage_only == 'true'", gate)
+
+    def test_twarm_modifier_checks_aliases_trust_and_branding_without_audio(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn("\"$TWARM_MIGRATION_ONLY\" == 'true' && \"$WORKER_MAINTENANCE_ONLY\" != 'true'", text)
+        self.assertIn("then scope=twarm-migration", text)
+        self.assertIn("if (( modifiers > 1 )); then", text)
+        job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
+        for required in ("./internal/releasemanager ./internal/releaseauth ./internal/distribution", "node scripts/build-brand-assets.mjs --check", "node scripts/test-site.cjs", "node scripts/test-password-auth.cjs", "node scripts/test-webui-notifications.cjs"):
+            self.assertIn(required, job)
+        self.assertNotIn("test-admin-audio", job)
+        self.assertNotIn("npm run test:browser", job)
 
     def test_worker_maintenance_checks_are_scoped_and_do_not_run_audio(self):
         text = (ROOT / ".github/workflows/release.yml").read_text()

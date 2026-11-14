@@ -1,6 +1,6 @@
 # Project website and screenshots
 
-The public project site is [MACT](https://arizzi74.github.io/MACT/).
+The public project site is [Twarm](https://arizzi74.github.io/Twarm/).
 It is a static website in `site/`, published by `.github/workflows/pages.yml`
 to GitHub Pages from `main`. The site has no gateway connection, login screen,
 analytics or external asset dependencies. Its installation links point to this

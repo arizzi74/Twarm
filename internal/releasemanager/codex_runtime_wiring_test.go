@@ -78,6 +78,8 @@ func newCodexWiringFixture(t *testing.T) *codexWiringFixture {
 		address := request.URL.String()
 		prefix := "https://github.com/" + DefaultRepo + "/releases/download/" + f.projectTag + "/"
 		switch address {
+		case "https://api.github.com/repositories/1369450599":
+			return coreResponse(request, []byte(fmt.Sprintf(`{"id":%d,"full_name":%q}`, officialRepositoryID, DefaultRepo))), nil
 		case codexLatestURL:
 			f.checks++
 			// The deferred runtime work must finish before execute releases the

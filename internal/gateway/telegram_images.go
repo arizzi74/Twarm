@@ -135,7 +135,7 @@ func (s *Sender) sendImageCheckpoint(ctx context.Context, row registry.Delivery,
 		} else if skip {
 			return 0, errSessionDeliverySuppressed
 		}
-		return s.sendAuthorizedMessage(ctx, row, SendMessage{ChatID: row.ChatID, TopicID: row.TopicID, Text: "The image could not be attached. Open its file link in the MACT Web UI to download it."})
+		return s.sendAuthorizedMessage(ctx, row, SendMessage{ChatID: row.ChatID, TopicID: row.TopicID, Text: "The image could not be attached. Open its file link in the Twarm Web UI to download it."})
 	}
 	store, ok := s.store.(telegramImageStore)
 	if !ok || s.options.Files == nil {

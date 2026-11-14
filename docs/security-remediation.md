@@ -23,13 +23,13 @@ It lacked full-history secret scanning and an audit of prebundled browser code.
 
 | Finding / assessment identifier | Disposition | Evidence and remaining scope |
 | --- | --- | --- |
-| First executable trust, MACT-02 / L-7 | **Mitigated; HTTPS bootstrap trust accepted by default** | The one-line `curl` setup trusts the HTTPS-delivered shell script. It checks a pinned v0.7.10 native manager against embedded SHA-256 hashes; the manager verifies signed release provenance and all target packages before installation. The optional authenticated-first procedure uses a separately trusted `gh` to verify the native manager before execution. The script does not independently authenticate itself. |
-| Pathological Markdown, MACT-01 | **Fixed** | `webui-format.js` uses bounded scanners/work/DOM budgets and pre-parse size checks, with inert full-text fallback. The permanent production-renderer browser test covers 8–128 KiB hostile inputs and a usable composer. |
+| First executable trust, Twarm-02 / L-7 | **Mitigated; HTTPS bootstrap trust accepted by default** | The one-line `curl` setup trusts the HTTPS-delivered shell script. It checks a pinned v0.7.10 native manager against embedded SHA-256 hashes; the manager verifies signed release provenance and all target packages before installation. The optional authenticated-first procedure uses a separately trusted `gh` to verify the native manager before execution. The script does not independently authenticate itself. |
+| Pathological Markdown, Twarm-01 | **Fixed** | `webui-format.js` uses bounded scanners/work/DOM budgets and pre-parse size checks, with inert full-text fallback. The permanent production-renderer browser test covers 8–128 KiB hostile inputs and a usable composer. |
 | Third-party display credentials, M-1 / L-2 | **Fixed** | Shared `auth` defaults cover GitHub, AWS, Google, Slack and JWT shapes in addition to existing rules. Worker outbox writes and reconnect sanitization retain event identities; live projections and literal credential rotation are tested. Unknown encodings and secrets split across fields remain outside a per-field redactor's guarantee. |
-| Raw file credential access, MACT-03 / L-3 | **Fixed** | `workerPrivateFilePaths` excludes default/custom MACT and Claude config/state/credential paths before opening bytes. Symlink, hard-link and traversal restrictions remain; ordinary allowed project files retain exact-byte downloads. Existing `.env` restrictions remain. |
-| Claude endpoint plaintext transport, L-1 | **Fixed**, with documented native boundary | Shared validation rejects HTTP on assignment and persisted reads before child credentials are supplied. MACT billing requests reject redirects. Native Claude's subsequent inference requests and redirect behavior are owned by the installed Claude CLI. |
-| Shipped browser dependencies, MACT-04 | **Fixed** | Rebuilt Mermaid bundle, notices and 68-version inventory contain patched DOMPurify, KaTeX and js-yaml. Both lockfile and actual shipped-version audits are required. No MACT exploit is asserted. See the package/advisory table in `browser-security.md`. |
-| Go OpenPGP advisory, MACT-04 residual | **Already fixed** in v0.7.7 | Runtime signatures use maintained `ProtonMail/go-crypto`; `golang.org/x/crypto/openpgp` is not imported. The scanner checks package/call reachability rather than failing on an unused module package. |
+| Raw file credential access, Twarm-03 / L-3 | **Fixed** | `workerPrivateFilePaths` excludes default/custom Twarm and Claude config/state/credential paths before opening bytes. Symlink, hard-link and traversal restrictions remain; ordinary allowed project files retain exact-byte downloads. Existing `.env` restrictions remain. |
+| Claude endpoint plaintext transport, L-1 | **Fixed**, with documented native boundary | Shared validation rejects HTTP on assignment and persisted reads before child credentials are supplied. Twarm billing requests reject redirects. Native Claude's subsequent inference requests and redirect behavior are owned by the installed Claude CLI. |
+| Shipped browser dependencies, Twarm-04 | **Fixed** | Rebuilt Mermaid bundle, notices and 68-version inventory contain patched DOMPurify, KaTeX and js-yaml. Both lockfile and actual shipped-version audits are required. No Twarm exploit is asserted. See the package/advisory table in `browser-security.md`. |
+| Go OpenPGP advisory, Twarm-04 residual | **Already fixed** in v0.7.7 | Runtime signatures use maintained `ProtonMail/go-crypto`; `golang.org/x/crypto/openpgp` is not imported. The scanner checks package/call reachability rather than failing on an unused module package. |
 | Live browser revocation, L-4 | **Already fixed**; regressions extended | WebSocket input revalidates authentication before forwarding; file requests authenticate before opening a stream and recheck each chunk/target. Tests cover revocation during activity and before new metadata/download requests. Passive WebSocket output uses the existing 15-second check interval plus bounded I/O; revocation is not an instantaneous recall of bytes already delivered. |
 | Abort token in argv, L-5 | **Fixed** | `workerupdate.AbortLease` sends the existing authenticated local control request over the private Unix socket. It spawns no process. Both manual worker CLIs use bounded stdin token input. The socket name and wire protocol remain compatible with older workers. |
 | CSRF, L-6 | **Mitigated/documented risk**; controls retained | Exact HTTPS Origin, `__Host-` Secure/SameSiteStrict cookies and double-submit CSRF checks remain. Authenticated settings changes additionally require fresh authentication. No demonstrated bypass justified replacing the scheme. |
@@ -62,7 +62,7 @@ or operator with the same host-account privileges. The single trusted operator
 can intentionally execute commands and open allowed project files. Raw file
 bytes travel through the gateway and bypass conversational redaction, so exact
 downloads are a distinct trust boundary. Existing private-path and `.env` guards
-are retained. MACT private state should live in a dedicated directory.
+are retained. Twarm private state should live in a dedicated directory.
 
 The gateway and browser depend on HTTPS, secure cookies, exact Origin and CSRF
 checks, current session authorization and trusted loopback proxy configuration.
@@ -86,7 +86,7 @@ GitHub CLI verification path now retained as an optional advanced procedure.
 The default bootstrap now uses a pinned native manager as described above.
 
 The implementation uses synthetic local credentials and test services; it does
-not submit test prompts or credentials to production MACT services. Additional
+not submit test prompts or credentials to production Twarm services. Additional
 publisher verification read only public GitHub release manifests and Sigstore
 trust data, without downloading or executing a manager.
 
@@ -179,8 +179,8 @@ command passed against the public v0.7.7 manifest and bundle:
 ```sh
 gh attestation verify "$manifest" \
   --bundle "$bundle" \
-  --repo arizzi74/MACT \
-  --cert-identity https://github.com/arizzi74/MACT/.github/workflows/release.yml@refs/tags/v0.7.7 \
+  --repo arizzi74/Twarm \
+  --cert-identity https://github.com/arizzi74/Twarm/.github/workflows/release.yml@refs/tags/v0.7.7 \
   --cert-oidc-issuer https://token.actions.githubusercontent.com \
   --source-ref refs/tags/v0.7.7 \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -208,7 +208,7 @@ the normal workspace with VCS stamping enabled; no verification was disabled.
 Native audio/model smoke tests and installed-app/Safari manual checks were not
 rerun. Existing platform CI remains responsible for native packaging and audio
 smoke tests; the security changes add portable script fixtures and Linux Chromium
-coverage. MACT does not currently ship a Windows worker package.
+coverage. Twarm does not currently ship a Windows worker package.
 
 ## Changed implementation groups
 

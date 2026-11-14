@@ -838,8 +838,12 @@ func (m *Manager) ApplyUpdate(ctx context.Context, l *Layout, packages map[strin
 	// Command links have in-memory rollback snapshots. Keep the alias after the
 	// existing paths so private backup filenames remain compatible with retention.
 	managerLayout := *l
-	aliasOccupied := false
-	if alias := l.AliasCommand; alias != "" && alias != l.Command && alias != l.Manager {
+	var occupiedAliases []string
+	for _, aliasField := range []*string{&managerLayout.AliasCommand, &managerLayout.CompatibilityCommand} {
+		alias := *aliasField
+		if alias == "" || alias == l.Command || alias == l.Manager {
+			continue
+		}
 		available, err := managerCommandAvailable(l, alias)
 		if err != nil {
 			return err
@@ -848,8 +852,8 @@ func (m *Manager) ApplyUpdate(ctx context.Context, l *Layout, packages map[strin
 			paths = append(paths, alias)
 		} else {
 			// Exclude foreign commands from both replacement and rollback.
-			managerLayout.AliasCommand = ""
-			aliasOccupied = true
+			*aliasField = ""
+			occupiedAliases = append(occupiedAliases, alias)
 		}
 	}
 	snapshots := make(map[string]*updateSnapshot)
@@ -931,14 +935,18 @@ func (m *Manager) ApplyUpdate(ctx context.Context, l *Layout, packages map[strin
 			}
 		}
 		changed[l.Command] = true
-		if alias := managerLayout.AliasCommand; alias != "" && snapshots[alias] != nil {
-			changed[alias] = true
+		for _, alias := range []string{managerLayout.AliasCommand, managerLayout.CompatibilityCommand} {
+			if alias != "" && snapshots[alias] != nil {
+				changed[alias] = true
+			}
 		}
 		if err := m.InstallManager(&managerLayout, filepath.Join(packages[l.Component], "codex-telegramgw")); err != nil {
 			return err
 		}
-		if aliasOccupied {
-			m.warnManagerAliasOccupied(l)
+		for _, alias := range occupiedAliases {
+			copy := *l
+			copy.AliasCommand = alias
+			m.warnManagerAliasOccupied(&copy)
 		}
 		if database != nil {
 			databaseMutated = true

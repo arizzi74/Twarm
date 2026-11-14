@@ -214,6 +214,95 @@ ARCHIVE_COMPATIBILITY_ALLOWED = frozenset({
 })
 
 
+TWARM_MIGRATION_ALLOWED = frozenset({
+    '.gitattributes',
+    '.github/workflows/release.yml',
+    'README.md',
+    'docs/admin.md',
+    'docs/browser-security.md',
+    'docs/claude-code.md',
+    'docs/installation.md',
+    'docs/mact-migration.md',
+    'docs/operations.md',
+    'docs/overview.md',
+    'docs/security-boundaries.md',
+    'docs/security-remediation.md',
+    'docs/telegram-commands.md',
+    'docs/twarm-migration.md',
+    'docs/website.md',
+    'docs/webui.md',
+    'internal/admin/admin.go',
+    'internal/admin/origin_test.go',
+    'internal/admin/static/app.css',
+    'internal/admin/static/app.js',
+    'internal/admin/static/index.html',
+    'internal/admin/static/twarm_logo+name.svg',
+    'internal/admin/static/twarm_logo.svg',
+    'internal/admin/static/webui-command-ui.js',
+    'internal/admin/static/webui-icon-180.png',
+    'internal/admin/static/webui-icon-192.png',
+    'internal/admin/static/webui-icon-512.png',
+    'internal/admin/static/webui-icon.svg',
+    'internal/admin/static/webui-manifest.webmanifest',
+    'internal/admin/static/webui-sw.js',
+    'internal/admin/static/webui.css',
+    'internal/admin/static/webui.html',
+    'internal/admin/static/webui.js',
+    'internal/admin/webui_pwa.go',
+    'internal/admin/webui_pwa_test.go',
+    'internal/admin/worker_enrollments.go',
+    'internal/admin/worker_enrollments_test.go',
+    'internal/claudeadapter/artifacts.go',
+    'internal/distribution/bootstrap_test.go',
+    'internal/gateway/assets/default-bot-profile.jpg',
+    'internal/gateway/telegram_images.go',
+    'internal/releasemanager/claude_runtime_apply.go',
+    'internal/releasemanager/claude_runtime_wiring_test.go',
+    'internal/releasemanager/codex_runtime_wiring_test.go',
+    'internal/releasemanager/command_alias_test.go',
+    'internal/releasemanager/manager.go',
+    'internal/releasemanager/platform.go',
+    'internal/releasemanager/release.go',
+    'internal/releasemanager/release_test.go',
+    'internal/releasemanager/repository.go',
+    'internal/releasemanager/repository_test.go',
+    'internal/releasemanager/setup_claude.go',
+    'internal/releasemanager/setup_gateway_finish_test.go',
+    'internal/releasemanager/setup_gateway_https.go',
+    'internal/releasemanager/setup_worker_service.go',
+    'internal/releasemanager/types.go',
+    'internal/releasemanager/update.go',
+    'internal/worker/webui.go',
+    'scripts/build-brand-assets.mjs',
+    'scripts/capture-site-screenshots.cjs',
+    'scripts/check-installer-release.py',
+    'scripts/install.sh',
+    'scripts/test-admin-bots.cjs',
+    'scripts/test-admin-ui.cjs',
+    'scripts/test-claude-ui.cjs',
+    'scripts/test-password-auth.cjs',
+    'scripts/test-site.cjs',
+    'scripts/test-webui-console-navigation.cjs',
+    'scripts/test-webui-notifications.cjs',
+    'scripts/test-webui.cjs',
+    'scripts/test_ci_installer_release.py',
+    'site/README.md',
+    'site/assets/favicon.svg',
+    'site/assets/screenshots/README.md',
+    'site/assets/screenshots/capture.json',
+    'site/assets/screenshots/webui-desktop.png',
+    'site/assets/screenshots/webui-mobile-sessions.png',
+    'site/assets/screenshots/webui-mobile.png',
+    'site/assets/site.css',
+    'site/assets/twarm_logo+name.svg',
+    'site/assets/twarm_logo.svg',
+    'site/index.html',
+    'twarm_logo+name.svg',
+    'twarm_logo.svg',
+    'twarm_logos_preview.html',
+})
+
+
 class ScopeError(Exception):
     pass
 
@@ -223,7 +312,7 @@ def git(*arguments, root=ROOT):
 
 
 def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
-    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility"):
+    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration"):
         raise ScopeError("Unknown focused release scope")
     target = STABLE.fullmatch(tag)
     previous = STABLE.fullmatch(baseline)
@@ -242,7 +331,7 @@ def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     names = git("diff", "--name-only", "--no-renames", "-z", base, commit, "--", root=root).split(b"\0")
     changed = {name.decode("utf-8", errors="strict") for name in names if name}
-    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED, "archive-compatibility": ARCHIVE_COMPATIBILITY_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
+    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED, "archive-compatibility": ARCHIVE_COMPATIBILITY_ALLOWED, "twarm-migration": TWARM_MIGRATION_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
     if not changed or changed - allowed:
         raise ScopeError("Focused release contains an empty or out-of-scope change set")
     # Even an allowed path must remain an ordinary file, never executable
@@ -270,7 +359,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("repo", "tag", "baseline", "commit"):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility"), default="installer")
+    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration"), default="installer")
     args = parser.parse_args()
     try:
         changed = validate(args.tag, args.baseline, args.commit, latest_release(args.repo), scope=args.scope)

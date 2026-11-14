@@ -1,6 +1,6 @@
 # Browser renderer security verification
 
-## Markdown (MACT-01)
+## Markdown (Twarm-01)
 
 `internal/admin/static/webui-format.js` renders message content with DOM nodes and
 `textContent`. A shared work budget covers speculative link and inline delimiter
@@ -27,7 +27,7 @@ assistant messages, public reasoning summaries and expanded plans; the composer
 must still submit a new input. Existing file-link tests separately cover padded
 and escaped destinations, embedded controls and unsupported schemes.
 
-## Shipped dependencies (MACT-04)
+## Shipped dependencies (Twarm-04)
 
 Verification on 29 October 2026 used the current npm registry audit and the
 maintainers' advisories. The original npm audit reported DOMPurify 3.4.16 and
@@ -43,8 +43,8 @@ DOMPurify is pinned in the lockfile at 3.4.17.
 | [js-yaml ordered-map CPU use, GHSA-5p4m-2wfm-xmqj](https://github.com/nodeca/js-yaml/security/advisories/GHSA-5p4m-2wfm-xmqj) | 4.x <4.3.1 / 4.3.1 | Mermaid's prebundled 4.3.0 replaced with 4.3.2. |
 | [js-yaml empty merge CPU use, GHSA-2883-xcg3-v3hh](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh) | 4.x <4.3.2 / 4.3.2 | Mermaid's prebundled 4.3.0 replaced with 4.3.2. |
 
-These advisories do not establish an exploit in MACT. Several require options,
-DOM inputs, prototype pollution or schemas MACT does not expose. MACT retains
+These advisories do not establish an exploit in Twarm. Several require options,
+DOM inputs, prototype pollution or schemas Twarm does not expose. Twarm retains
 Mermaid's strict mode, rejects directives/frontmatter, uses an opaque sandbox
 without network or parent-DOM access, sanitizes the serialized SVG again, and
 displays it only as an image. The patches remove the affected code regardless of

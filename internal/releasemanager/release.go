@@ -318,11 +318,11 @@ func (m *Manager) FetchRelease(ctx context.Context, repo, version string) (*Rele
 	if m.verifyManifest != nil {
 		verify = m.verifyManifest
 	}
-	if repo == RenamedRepo {
+	if repo == RenamedRepo || repo == PreviousRepo {
 		// Renaming the repository changes asset URLs, but cannot change the
 		// identity in historical certificates. Select an exact identity before
 		// verification; an invalid signature is never retried with another.
-		release.SourceRepo, err = releaseauth.CandidateRepository(release.Tag, attestation, RenamedRepo, LegacyRepo)
+		release.SourceRepo, err = releaseauth.CandidateRepository(release.Tag, attestation, RenamedRepo, PreviousRepo, LegacyRepo)
 		if err != nil {
 			return nil, err
 		}

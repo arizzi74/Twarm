@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 128" fill="none">
+  <!-- Icon Mark -->
+  <g transform="translate(8, 0)">
+    <path d="M80 28.5L64 19.5L26 41.5V86.5L64 108.5L102 86.5V66"
+          stroke="#B5F53A"
+          stroke-width="8"
+          stroke-linecap="square"
+          stroke-linejoin="miter"/>
+    <polygon points="101,25 87,49 115,49" fill="#B5F53A"/>
+    <path d="M45 50L59 64L45 78"
+          stroke="#B5F53A"
+          stroke-width="8"
+          stroke-linecap="square"
+          stroke-linejoin="miter"/>
+    <line x1="65" y1="78" x2="83" y2="78"
+          stroke="#B5F53A"
+          stroke-width="8"
+          stroke-linecap="square"/>
+  </g>
+
+  <!-- Geometric Wordmark: TWARM -->
+  <g fill="#B5F53A" transform="translate(148, 41)">
+    <!-- T -->
+    <path d="M0 0H44V8.5H26.5V46H17.5V8.5H0V0Z"/>
+    <!-- W -->
+    <path d="M52 0H61.5L70.5 32.5L79.5 0H88.5L97.5 32.5L106.5 0H116L102.5 46H93.5L84 14L74.5 46H65.5L52 0Z"/>
+    <!-- A -->
+    <path d="M139 0H149L168 46H158.5L154 35H134L129.5 46H120L139 0ZM137 27H151L144 9.5L137 27Z"/>
+    <!-- R -->
+    <path d="M178 0H202C211.5 0 217.5 5.5 217.5 14C217.5 20.5 213.5 25.5 207 27L218.5 46H208L197.5 28H187V46H178V0ZM187 8V20.5H201C205.5 20.5 208.5 18 208.5 14.25C208.5 10.5 205.5 8 201 8H187Z"/>
+    <!-- M -->
+    <path d="M230 0H240L256 27L272 0H282V46H273V15L258.5 38.5H253.5L239 15V46H230V0Z"/>
+  </g>
+</svg>

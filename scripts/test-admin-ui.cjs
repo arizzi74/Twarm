@@ -152,9 +152,11 @@ const data = {
     if (page.clock) await page.clock.install();
     await page.goto('https://admin.test/tgw/admin');
     await page.waitForSelector('#console:not([hidden])');
-    assert.equal(await page.title(), 'MACT Gateway · Operations console');
-    assert.equal(await page.locator('.eyebrow').textContent(), 'MACT GATEWAY');
-    assert.equal(await page.getByRole('link', { name: 'Open MACT', exact: true }).getAttribute('href'), '/tgw/webui/');
+    assert.equal(await page.title(), 'Twarm Gateway · Operations console');
+    assert.equal(await page.locator('.admin-brand img').getAttribute('alt'), 'Twarm');
+    assert.equal(await page.locator('.admin-brand img').getAttribute('src'), '/tgw/webui/static/twarm_logo+name.svg');
+    assert.equal(await page.locator('.admin-brand img').evaluate(image => image.complete && image.naturalWidth > 0), true, 'The supplied wordmark loads as a standalone SVG');
+    assert.equal(await page.getByRole('link', { name: 'Open Twarm', exact: true }).getAttribute('href'), '/tgw/webui/');
     const sectionIDs = ['telegram-bots-section', 'audio-section', 'session-section', 'worker-section', 'passkey-section', 'browser-session-section', 'password-section'];
     for (const id of sectionIDs) {
       const section = page.locator('#' + id);
@@ -364,7 +366,7 @@ const data = {
     await page.keyboard.press('Enter');
     await waitForEnrollment();
     await page.locator('.enrollment-install summary').click();
-    assert.equal(await page.locator('.enrollment-command code').textContent(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker');
+    assert.equal(await page.locator('.enrollment-command code').textContent(), 'curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker');
     assert.equal(await page.locator('.enrollment-command').isVisible(), true);
     assert.doesNotMatch(await page.locator('.enrollment-install').textContent(), /MACT_INSTALLER_DIR|download and authenticate the installer/);
     const firstEnrollment = enrollmentResponses.at(-1);
@@ -578,7 +580,7 @@ const data = {
     assert.equal(await page.locator('.browser-session').count(), 0, 'Session expiry removes browser-session data');
     assert.equal(await page.locator('#worker-enrollment').evaluate(dialog => dialog.open), false, 'Session expiry closes enrollment');
     assert.equal(await page.locator('#enrollment-url').inputValue(), '', 'Session expiry clears the enrollment URL');
-    assert.ok(paths.every(path => path === '/tgw/admin' || path.startsWith('/tgw/admin/') || path.startsWith('/tgw/api/')), 'Every gateway request must use the /tgw prefix');
+    assert.ok(paths.every(path => path === '/tgw/admin' || path.startsWith('/tgw/admin/') || path.startsWith('/tgw/webui/static/') || path.startsWith('/tgw/api/')), 'Every gateway request must use the /tgw prefix');
     // Notification links retain only the built-in session target after login.
     dashboardStatus = 200;
     const sessionLink = '/tgw/webui/?session_id=11111111-2222-4333-8444-555555555555';

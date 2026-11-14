@@ -6,3 +6,8 @@ internal/admin/static/webui-mermaid-LICENSE.txt -whitespace linguist-generated=t
 native/piper/licenses/** -whitespace
 native/qwen-tts/licenses/** -whitespace
 native/qwen-tts/threads.patch -whitespace
+
+# Supplied branding sources are retained byte-for-byte.
+/twarm_logo.svg -whitespace
+/twarm_logo+name.svg -whitespace
+/twarm_logos_preview.html -whitespace

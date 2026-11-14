@@ -533,7 +533,7 @@ async function checkPendingRecovery(browser, width) {
       assert.equal(await page.locator('#bot-info img').count(), 0, 'Bot names are plain text');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Bot cards fit the viewport');
       const nameSetting = id => card(id).getByRole('checkbox', { name: 'Inherit selected session name' });
-      const photoReset = id => card(id).getByRole('button', { name: 'Reset profile photo >_', exact: true });
+      const photoReset = id => card(id).getByRole('button', { name: 'Reset Twarm profile photo', exact: true });
       assert.equal(await nameSetting(primaryID).isChecked(), false, 'Name inheritance is opt in, including the primary bot');
       assert.match(await card(primaryID).innerText(), /Original name · Session name; uses your private chat selection/);
       assert.match(await card(primaryID).innerText(), /default Telegram display name/);
@@ -751,12 +751,12 @@ async function checkPendingRecovery(browser, width) {
       if (screenshots) await page.locator('#telegram-bots-section').screenshot({ path: path.join(screenshots, 'telegram-bots-' + width + '.png') });
 
       await page.locator('#bot-create').click();
-      const defaultPhoto = page.getByRole('img', { name: 'MACT profile icon' });
+      const defaultPhoto = page.getByRole('img', { name: 'Twarm profile icon' });
       assert.equal(await defaultPhoto.isVisible(), true, 'Creation previews the default profile photo');
       assert.equal(await defaultPhoto.getAttribute('src'), '/tgw/admin/static/webui-icon.svg', 'The default profile photo uses the local Gateway icon');
       assert.equal(await defaultPhoto.evaluate(icon => icon.complete && icon.naturalWidth > 0), true, 'The profile icon loads successfully');
       assert.deepEqual(await defaultPhoto.evaluate(icon => ({ width: icon.width, height: icon.height })), { width: 48, height: 48 }, 'The profile preview stays compact');
-      assert.match(await page.locator('.bot-profile-default').innerText(), /New bots use the MACT icon as their profile photo/);
+      assert.match(await page.locator('.bot-profile-default').innerText(), /New bots use the Twarm icon as their profile photo/);
       assert.equal(await page.locator('#bot-create-dialog').evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth && dialog.getBoundingClientRect().width <= innerWidth), true, 'The creation form and profile preview fit the viewport');
       assert.equal(await page.locator('#bot-create-form input').count(), 1, 'Creation asks only for a display name and manager');
       assert.equal(await page.locator('#bot-create-username').count(), 0, 'There is no manual username field');

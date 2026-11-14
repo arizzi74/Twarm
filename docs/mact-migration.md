@@ -1,3 +1,6 @@
+> Historical migration: this document describes the earlier Telegram Gateway → MACT change.
+> For the current name and update path, see [Twarm migration](twarm-migration.md).
+
 # Migration to MACT
 
 MACT stands for **Multi Agent Control Tower**. It is the new product name for

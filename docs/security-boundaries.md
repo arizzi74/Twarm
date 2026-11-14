@@ -1,6 +1,6 @@
 # Worker credential and file boundaries
 
-MACT assumes a single trusted operator. An authorized operator can run commands
+Twarm assumes a single trusted operator. An authorized operator can run commands
 on an enrolled worker through its coding agent, subject to the selected native
 permission mode. The protections below reduce accidental credential disclosure;
 they do not isolate the worker account from that operator or from code running
@@ -32,12 +32,12 @@ across multiple target releases.
 Worker display text is redacted before it enters the durable gateway event
 outbox. Startup/reconnect also sanitizes older queued events while retaining
 their event IDs, sequence numbers and timestamps. Telegram and native Web UI
-projections use the same default credential rules. Default rules cover MACT
+projections use the same default credential rules. Default rules cover Twarm
 worker tokens, `sk-` API keys, Telegram bot tokens, GitHub classic and fine-grained
 PAT formats, AWS access-key IDs (including temporary IDs), Google API keys,
 common Slack token formats and signed JWT-shaped strings. JWT matching is based
 on the token's shape and does not require a `Bearer` label. These are format
-checks; MACT does not contact providers to determine whether a match is live.
+checks; Twarm does not contact providers to determine whether a match is live.
 
 `redact_patterns` adds rules to these defaults. Worker-stored Claude API keys and
 auth tokens are additionally matched literally, including previous values after
@@ -55,7 +55,7 @@ history, command input or filesystem bytes.
 
 Browser file open, preview and download use the same worker `file_open` path.
 Before opening a file, that path excludes the worker's configuration source,
-token, database and its state directory, default MACT state directories,
+token, database and its state directory, default Twarm state directories,
 configured runtime-settings files (including custom locations), atomic settings
 temporary files, `.claude` directories, `.claude.json` files/backups and the
 native directory selected by `CLAUDE_CONFIG_DIR`. Relative native config paths
@@ -90,10 +90,10 @@ normal native endpoint. For an existing HTTP configuration, change `base_url`
 in the worker's private runtime-settings file to a trusted HTTPS endpoint (or
 empty) before restarting the upgraded worker.
 
-The MACT-owned credit-balance request accepts only its fixed HTTPS provider
+The Twarm-owned credit-balance request accepts only its fixed HTTPS provider
 endpoint and rejects every redirect before making a second request. Native
 Claude inference networking, including response-redirect handling, is performed
-by the installed Claude CLI. MACT validates the initial configured endpoint but
+by the installed Claude CLI. Twarm validates the initial configured endpoint but
 does not control that CLI's subsequent network behavior. Only configure trusted
 HTTPS endpoints; HTTPS protects transport and does not establish that a provider
 is trustworthy. Validation errors never include the endpoint or credential.

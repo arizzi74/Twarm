@@ -743,7 +743,7 @@ func (m *Manager) finishClaudeRecovery(l *Layout, j *claudeRecovery) error {
 
 // Keep three private rollback copies. Tiny ownership receipts may outlive a
 // copy while that version remains protected; otherwise its later removal would
-// lose the proof needed to prune MACT-created native binaries safely.
+// lose the proof needed to prune Twarm-created native binaries safely.
 func (m *Manager) pruneClaudeBackups(l *Layout) {
 	for _, path := range []string{l.Home, filepath.Join(l.Home, ".local"), filepath.Join(l.Home, ".local/bin"), filepath.Join(l.Home, ".local/share"), filepath.Join(l.Home, ".local/share/claude"), filepath.Join(l.Home, ".local/share/claude/versions"), filepath.Join(l.Home, ".local/state"), filepath.Dir(l.Lock), claudeBackupRoot(l)} {
 		if !claudeOwnedPath(path, true) {
@@ -850,7 +850,7 @@ func (m *Manager) pruneClaudeBackups(l *Layout) {
 
 // A pathname may be replaced while its old descriptor is being hashed. Check
 // its identity again afterward, and recheck the current selection immediately
-// before unlinking. Changed files are no longer considered MACT-owned.
+// before unlinking. Changed files are no longer considered Twarm-owned.
 func pruneClaudeNativeVersion(j *claudeRecovery, hash func(string) (string, error)) bool {
 	path := j.candidatePath()
 	info, err := os.Lstat(path)

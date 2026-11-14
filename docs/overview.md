@@ -1,15 +1,15 @@
-# MACT overview
+# Twarm overview
 
 [Project home](../README.md) · [Installation](installation.md) · [Claude Code workers](claude-code.md)
 
-A control hub for coding agents across sessions and machines. MACT currently
+A control hub for coding agents across sessions and machines. Twarm currently
 supports Codex and Claude Code through dedicated workers, with access through a responsive browser interface and allowlisted
 Telegram bots. Its Go gateway and Linux/macOS workers use embedded SQLite storage.
 The gateway includes an admin console with passkeys and optional username/password
 sign-in. Workers supervise
 private Codex app-server processes or Claude Code streaming sessions. Codex workers also support local terminal attachment. See [Claude Code workers](claude-code.md) for setup and supported capabilities.
 
-MACT was previously named Codex Telegram Gateway. The migration keeps existing
+Twarm was previously named Codex Telegram Gateway. The migration keeps existing
 installations, sessions and commands working. The management command is now
 `mact`; `codex-telegramgw` remains supported. See the
 [name migration guide](mact-migration.md) for repository transition details
@@ -26,11 +26,11 @@ It also accepts images up to 10 MiB and other file attachments up to 20 MiB.
 Other files are saved in the selected session's `inbound/` folder, with optional
 instructions sent to the selected coding agent. See [Web UI file uploads](webui.md#uploading-files).
 
-[Explore the website](https://arizzi74.github.io/MACT/) ·
+[Explore the website](https://arizzi74.github.io/Twarm/) ·
 [Installation guide](installation.md) ·
-[Latest release](https://github.com/arizzi74/MACT/releases/latest)
+[Latest release](https://github.com/arizzi74/Twarm/releases/latest)
 
-[![Desktop browser interface with a session list, conversation and live tool activity. Screenshot uses fictional demo data.](../site/assets/screenshots/webui-desktop.png)](https://arizzi74.github.io/MACT/#screenshots)
+[![Desktop browser interface with a session list, conversation and live tool activity. Screenshot uses fictional demo data.](../site/assets/screenshots/webui-desktop.png)](https://arizzi74.github.io/Twarm/#screenshots)
 
 ## Architecture
 
@@ -81,7 +81,7 @@ flowchart TB
 ## Quick install
 
 Requires curl and `sha256sum` or `shasum`; Python and a Go compiler are not
-required. Setup installs the latest stable MACT release. The HTTPS bootstrap
+required. Setup installs the latest stable Twarm release. The HTTPS bootstrap
 checks a pinned native manager, which verifies signed release provenance and
 downloaded packages. Installing Codex when it is missing also needs the standard
 `tar` and `gzip` utilities. An
@@ -91,7 +91,7 @@ uses a separately trusted GitHub CLI.
 **Gateway (Linux with systemd):** run on the gateway machine:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sudo sh -s -- setup gateway
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- setup gateway
 ```
 
 Have a domain pointing to this machine, your Telegram bot username and token,
@@ -109,7 +109,7 @@ console and copy the one-use URL, then run on its machine as the account that
 owns your projects, without sudo:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker
 ```
 
 Enter a worker display name and the enrollment URL, which is visible as you
@@ -133,14 +133,14 @@ account is logged in.
 then enroll a separate worker identity and run without sudo:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup claude-worker
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup claude-worker
 ```
 
 Use an existing Claude login or configure the model, endpoint, authentication
 mode and tool permissions in the admin console. Claude supports existing login,
 API keys and authentication tokens; its private account settings stay on the
 worker. Tool permission modes include normal approval requests, accepting edits,
-plan mode and an explicit bypass-permissions choice. MACT installs and updates
+plan mode and an explicit bypass-permissions choice. Twarm installs and updates
 the dedicated worker and maintains supported native Claude CLI installations
 when idle. See
 [Claude Code workers](claude-code.md).
@@ -149,14 +149,14 @@ Prompts work through the pipe; bot-token input is hidden and enrollment URLs are
 visible. Rerunning the installer preserves existing configurations and running
 sessions; prepared private JSON
 configurations are also supported. Gateway completion can be resumed with
-`sudo mact finish gateway`.
+`sudo twarm finish gateway`.
 
 Gateway URLs all live under `/tgw`: `/tgw/admin/` for the console,
 `/tgw/webui/` for the browser agent interface, `/tgw/api/v1/` for APIs,
 and `/tgw/healthz` and `/tgw/readyz` for health checks.
 
-The gateway and worker installers enable daily MACT updates from
-[GitHub Releases](https://github.com/arizzi74/MACT/releases).
+The gateway and worker installers enable daily Twarm updates from
+[GitHub Releases](https://github.com/arizzi74/Twarm/releases).
 Codex workers also check for stable Codex runtime updates once per day (UTC).
 Claude workers check their configured official release channel daily, defaulting
 to `latest` and honoring an explicit `stable` selection.
@@ -362,7 +362,7 @@ Open **Admin → Audio support in Telegram** to enable transcription, download a
 model, and select CPU threads. The page shows available CPUs and RAM, recommends
 the multilingual **base** model and one fewer thread than available cores
 (minimum one), and preserves existing installations' selections. The CLI
-alternative remains `sudo mact setup voice`.
+alternative remains `sudo twarm setup voice`.
 
 Optional spoken replies offer **Piper (Miro / Ryan)** for Italian and English or
 **Qwen3-TTS 1.7B quantized** for multilingual speech with a larger CPU and RAM

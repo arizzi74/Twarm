@@ -3,6 +3,10 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      twarm_migration_only:
+        description: With worker_maintenance_only, prove branding and updater migration scope without unrelated feature tests
+        type: boolean
+        default: false
       archive_compatibility_only:
         description: With worker_maintenance_only, prove archive compatibility scope and run archive checks without audio inference
         type: boolean
@@ -63,6 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      twarm_migration_only: ${{ steps.scope.outputs.twarm_migration_only }}
       archive_compatibility_only: ${{ steps.scope.outputs.archive_compatibility_only }}
       claude_mcp_only: ${{ steps.scope.outputs.claude_mcp_only }}
       worker_maintenance_only: ${{ steps.scope.outputs.worker_maintenance_only }}
@@ -86,6 +91,7 @@ jobs:
           RELEASE_REF: ${{ github.ref }}
           RELEASE_COMMIT: ${{ github.sha }}
           BASELINE_TAG: ${{ inputs.baseline_tag }}
+          TWARM_MIGRATION_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.twarm_migration_only }}
           ARCHIVE_COMPATIBILITY_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.archive_compatibility_only }}
           CLAUDE_MCP_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_mcp_only }}
           WORKER_MAINTENANCE_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.worker_maintenance_only }}
@@ -97,6 +103,19 @@ jobs:
           CLAUDE_SKILLS_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_skills_only }}
           CLAUDE_SKILLS_UI_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.claude_skills_ui_only }}
         run: |
+          if [[ "$TWARM_MIGRATION_ONLY" == 'true' && "$WORKER_MAINTENANCE_ONLY" != 'true' ]]; then
+            echo 'The Twarm migration modifier requires guarded worker maintenance mode.' >&2
+            exit 1
+          fi
+          modifiers=0
+          for modifier in "$TWARM_MIGRATION_ONLY" "$ARCHIVE_COMPATIBILITY_ONLY" "$CLAUDE_MCP_ONLY"; do
+            if [[ "$modifier" == 'true' ]]; then modifiers=$((modifiers + 1)); fi
+          done
+          if (( modifiers > 1 )); then
+            echo 'Worker maintenance modifiers are mutually exclusive.' >&2
+            exit 1
+          fi
+          printf 'twarm_migration_only=false\n' >> "$GITHUB_OUTPUT"
           if [[ "$ARCHIVE_COMPATIBILITY_ONLY" == 'true' && "$WORKER_MAINTENANCE_ONLY" != 'true' ]]; then
             echo 'The archive modifier requires the guarded worker maintenance mode.' >&2
             exit 1
@@ -126,10 +145,12 @@ jobs:
           if [[ "$WORKER_MAINTENANCE_ONLY" == 'true' ]]; then
             test "$RELEASE_REF" = "refs/tags/$RELEASE_TAG"
             scope=worker-maintenance
+            if [[ "$TWARM_MIGRATION_ONLY" == 'true' ]]; then scope=twarm-migration; fi
             if [[ "$CLAUDE_MCP_ONLY" == 'true' ]]; then scope=claude-mcp; fi
             if [[ "$ARCHIVE_COMPATIBILITY_ONLY" == 'true' ]]; then scope=archive-compatibility; fi
             python3 scripts/check-installer-release.py --scope "$scope" --repo "$RELEASE_REPO" --tag "$RELEASE_TAG" --baseline "$BASELINE_TAG" --commit "$RELEASE_COMMIT"
             printf 'installer_only=false\nworker_maintenance_only=true\n' >> "$GITHUB_OUTPUT"
+            if [[ "$TWARM_MIGRATION_ONLY" == 'true' ]]; then printf 'twarm_migration_only=true\n' >> "$GITHUB_OUTPUT"; fi
             if [[ "$CLAUDE_MCP_ONLY" == 'true' ]]; then printf 'claude_mcp_only=true\n' >> "$GITHUB_OUTPUT"; fi
             if [[ "$ARCHIVE_COMPATIBILITY_ONLY" == 'true' ]]; then printf 'archive_compatibility_only=true\n' >> "$GITHUB_OUTPUT"; fi
           elif [[ "$WEBUI_ONLY" == 'true' ]]; then
@@ -409,12 +430,12 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_ci_installer_release.py
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
       - name: Check Claude startup, cancellation and native lifecycle
-        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true'
+        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true' && needs.release-mode.outputs.twarm_migration_only != 'true'
         run: |
           go vet ./internal/claudeadapter ./internal/workerrestart ./internal/worker ./internal/registry ./internal/gateway ./internal/admin ./internal/protocol ./internal/telegramcommands ./cmd/claude-worker ./cmd/codex-worker
           go test -race ./internal/claudeadapter ./internal/workerrestart ./internal/protocol ./internal/telegramcommands ./cmd/claude-worker ./cmd/codex-worker -count=1
       - name: Check durable worker routing and restart authorization
-        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true'
+        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true' && needs.release-mode.outputs.twarm_migration_only != 'true'
         run: |
           go test -race ./internal/worker -run 'Test(Agent|Store|WorkerRestart|ClaudeWorkerIntegration|WebUICommandIsTypedScopedAndNeverReplayed)' -count=1
           go test -race ./internal/registry -run 'Test(TelegramWorkerRestart|WebUIWorkerRestart)' -count=1
@@ -432,10 +453,18 @@ jobs:
           go vet ./internal/sessionarchive ./internal/worker ./internal/registry ./internal/protocol
           go test -race ./internal/sessionarchive -count=1 -timeout=5m
           go test -race ./internal/worker ./internal/registry ./internal/protocol -run 'TestArchive|TestRestore|TestSessionArchive|TestWebUISessionArchive|TestWebUIArchive|TestNativeSelfContained' -count=1 -timeout=5m
+      - name: Check Twarm aliases, immutable repository resolution and signed update policy
+        if: needs.release-mode.outputs.twarm_migration_only == 'true'
+        run: |
+          go vet ./internal/releasemanager ./internal/releaseauth ./internal/distribution ./internal/admin ./internal/gateway ./internal/worker ./internal/claudeadapter
+          go test -race ./internal/releasemanager ./internal/releaseauth ./internal/distribution -count=1 -timeout=8m
+          go test -race ./internal/admin -run 'Test(AdminUsesConfigured|AdminRejectsInvalidOrigins|WebUINotificationAssets|InstalledConsole|WorkerEnrollment)' -count=1
+          go test -race ./internal/gateway -run 'Test(DefaultBotProfile|TelegramImage)' -count=1
+          go test -race ./internal/claudeadapter -run 'Test.*Artifact' -count=1
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Check browser confirmation and session isolation
-        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true'
+        if: needs.release-mode.outputs.claude_mcp_only != 'true' && needs.release-mode.outputs.archive_compatibility_only != 'true' && needs.release-mode.outputs.twarm_migration_only != 'true'
         run: |
           node scripts/test-webui-worker-restart.cjs
           node scripts/test-webui.cjs
@@ -445,6 +474,18 @@ jobs:
       - name: Check archive progress, failure messages and session isolation
         if: needs.release-mode.outputs.archive_compatibility_only == 'true'
         run: node scripts/test-webui-session-management.cjs
+
+      - name: Check Twarm app, icons, authentication continuity and public website
+        if: needs.release-mode.outputs.twarm_migration_only == 'true'
+        run: |
+          node scripts/build-brand-assets.mjs --check
+          node scripts/test-admin-ui.cjs
+          node scripts/test-admin-bots.cjs
+          node scripts/test-password-auth.cjs
+          node scripts/test-webui.cjs
+          node scripts/test-webui-console-navigation.cjs
+          node scripts/test-webui-notifications.cjs
+          node scripts/test-site.cjs
 
   package:
     needs: [native-whisper, native-speech]

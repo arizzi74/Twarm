@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -202,6 +203,9 @@ func TestReleaseMetadataPinnedAndScoped(t *testing.T) {
 			calls := 0
 			m.HTTP.Transport = coreRoundTripper(func(r *http.Request) (*http.Response, error) {
 				calls++
+				if r.URL.String() == "https://api.github.com/repositories/1369450599" {
+					return coreResponse(r, []byte(fmt.Sprintf(`{"id":%d,"full_name":%q}`, officialRepositoryID, DefaultRepo))), nil
+				}
 				data := encoded
 				if r.URL.Hostname() == "github.com" {
 					data = []byte(coreHash(nil) + "  codex-worker-linux-amd64.tar.gz\n")
@@ -213,7 +217,7 @@ func TestReleaseMetadataPinnedAndScoped(t *testing.T) {
 			})
 			release, e := m.FetchRelease(context.Background(), DefaultRepo, pin)
 			if tc == "valid" {
-				if e != nil || release.Tag != "v1.2.3" || calls != 3 {
+				if e != nil || release.Tag != "v1.2.3" || calls != 4 {
 					t.Fatal(release, e, calls)
 				}
 			} else if e == nil {
@@ -352,6 +356,9 @@ func TestGatewayPackageRequiresBundledWhisperReleaseVersion(t *testing.T) {
 				return nil
 			}
 			m.HTTP.Transport = coreRoundTripper(func(request *http.Request) (*http.Response, error) {
+				if request.URL.String() == "https://api.github.com/repositories/1369450599" {
+					return coreResponse(request, []byte(fmt.Sprintf(`{"id":%d,"full_name":%q}`, officialRepositoryID, DefaultRepo))), nil
+				}
 				data := encoded
 				switch filepath.Base(request.URL.Path) {
 				case "SHA256SUMS":

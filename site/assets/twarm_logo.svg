@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="#0D0F12"/>
+
+  <!-- Open Hexagon Frame -->
+  <path d="M80 28.5L64 19.5L26 41.5V86.5L64 108.5L102 86.5V66"
+        stroke="#B5F53A"
+        stroke-width="8"
+        stroke-linecap="square"
+        stroke-linejoin="miter"/>
+
+  <!-- Outbound Swarm Delta Triangle -->
+  <polygon points="101,25 87,49 115,49" fill="#B5F53A"/>
+
+  <!-- Terminal Prompt (>_) -->
+  <path d="M45 50L59 64L45 78"
+        stroke="#B5F53A"
+        stroke-width="8"
+        stroke-linecap="square"
+        stroke-linejoin="miter"/>
+  <line x1="65" y1="78" x2="83" y2="78"
+        stroke="#B5F53A"
+        stroke-width="8"
+        stroke-linecap="square"/>
+</svg>

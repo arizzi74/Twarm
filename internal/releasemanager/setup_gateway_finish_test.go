@@ -126,12 +126,12 @@ func TestFinishGatewayRegistersBotAsServiceAccountAndGuidesEnrollment(t *testing
 			t.Fatalf("unexpected operation %v", command)
 		}
 	}
-	for _, message := range []string{"https://gateway.example.com/tgw/admin/", "enroll a worker", "one-use enrollment URL", "curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker", "Enter a worker name", "/tgsessions"} {
+	for _, message := range []string{"https://gateway.example.com/tgw/admin/", "enroll a worker", "one-use enrollment URL", "curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker", "Enter a worker name", "/tgsessions"} {
 		if !strings.Contains(output.String(), message) {
 			t.Fatalf("missing setup guidance: %s", message)
 		}
 	}
-	if strings.Contains(output.String(), "MACT_INSTALLER_DIR") || strings.Contains(output.String(), "First authenticate the installer") {
+	if strings.Contains(output.String(), "Twarm_INSTALLER_DIR") || strings.Contains(output.String(), "First authenticate the installer") {
 		t.Fatal("setup guidance requires manual installer authentication")
 	}
 }

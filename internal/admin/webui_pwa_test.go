@@ -2,6 +2,7 @@ package admin
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"image/png"
 	"net/http"
 	"net/http/httptest"
@@ -39,7 +40,7 @@ func TestWebUINotificationAssetsAreScopedAndUncached(t *testing.T) {
 	if manifest.ID != "/tgw/webui/" || manifest.Scope != manifest.ID || manifest.StartURL != manifest.ID || manifest.Display != "standalone" {
 		t.Fatalf("unexpected install scope: %+v", manifest)
 	}
-	if manifest.Name != "MACT · Multi Agent Control Tower" || manifest.ShortName != "MACT" || manifest.Description != "A control hub for coding agents across sessions and machines." {
+	if manifest.Name != "Twarm · Coding agent control hub" || manifest.ShortName != "Twarm" || manifest.Description != "A control hub for coding agents across sessions and machines." {
 		t.Fatalf("unexpected install branding: %+v", manifest)
 	}
 	if len(manifest.Icons) == 0 {
@@ -48,6 +49,13 @@ func TestWebUINotificationAssetsAreScopedAndUncached(t *testing.T) {
 	for _, icon := range manifest.Icons {
 		if !strings.HasPrefix(icon.Src, "/tgw/webui/static/webui-icon") {
 			t.Fatalf("icon escaped the public UI assets: %q", icon.Src)
+		}
+	}
+	for _, asset := range []string{"twarm_logo.svg", "twarm_logo+name.svg", "webui-icon.svg"} {
+		w := request("/tgw/webui/static/"+asset, "image/svg+xml")
+		var svg struct{ XMLName xml.Name }
+		if err := xml.Unmarshal(w.Body.Bytes(), &svg); err != nil || svg.XMLName.Local != "svg" || svg.XMLName.Space != "http://www.w3.org/2000/svg" {
+			t.Fatalf("invalid standalone SVG %s: %+v %v", asset, svg.XMLName, err)
 		}
 	}
 	w = request("/tgw/webui/sw.js", "application/javascript")

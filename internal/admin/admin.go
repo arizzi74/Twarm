@@ -78,7 +78,7 @@ func New(store *registry.Store, cfg Config) (*Server, error) {
 		return nil, errors.New("admin: origin must be an exact https origin")
 	}
 	origin := u.String()
-	w, err := wa.New(&wa.Config{RPID: u.Hostname(), RPDisplayName: "MACT Gateway", RPOrigins: []string{origin}, RPTopOrigins: []string{origin}, AuthenticatorSelection: protocol.AuthenticatorSelection{UserVerification: protocol.VerificationRequired}})
+	w, err := wa.New(&wa.Config{RPID: u.Hostname(), RPDisplayName: "Twarm Gateway", RPOrigins: []string{origin}, RPTopOrigins: []string{origin}, AuthenticatorSelection: protocol.AuthenticatorSelection{UserVerification: protocol.VerificationRequired}})
 	if err != nil {
 		return nil, fmt.Errorf("admin: configure webauthn: %w", err)
 	}

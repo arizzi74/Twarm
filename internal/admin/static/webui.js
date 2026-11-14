@@ -95,7 +95,7 @@
   }
   function sessionDeletionDescription(session) {
     return isClaude(session)
-      ? 'This permanently removes this Claude conversation’s files and its MACT session data. The project directory and all project files will be kept.'
+      ? 'This permanently removes this Claude conversation’s files and its Twarm session data. The project directory and all project files will be kept.'
       : 'This permanently removes the conversation and any child sessions it created. The working directory and all files on disk will be kept.';
   }
   function statusNumber(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER ? value : null; }
@@ -196,7 +196,7 @@
     const nativeUsage = status?.usage, nativeSpend = nativeUsage?.apiSpend;
     const budget = nativeSpend || status?.enterpriseBudget;
     const budgetObserved = (nativeSpend ? nativeUsage.observedAt : budget?.observedAt) > 0 ? timestamp(nativeSpend ? nativeUsage.observedAt : budget.observedAt) : null;
-    let budgetText = status ? 'API spend unavailable' : 'API spend —', budgetDescription = 'Claude Code has not reported the account’s spending allowance. MACT retries automatically with backoff and retains the last successful account report.';
+    let budgetText = status ? 'API spend unavailable' : 'API spend —', budgetDescription = 'Claude Code has not reported the account’s spending allowance. Twarm retries automatically with backoff and retains the last successful account report.';
     if (nativeSpend) {
       budgetText = nativeSpend.remaining !== null ? 'API spend ' + usd(nativeSpend.remaining) + ' / ' + usd(nativeSpend.limit) + ' left'
         : nativeSpend.spent !== null ? 'API spend ' + usd(nativeSpend.spent) + ' spent' : 'API spend unavailable';
@@ -1254,12 +1254,12 @@
     $('questions').replaceChildren();
     $('questions').hidden = true;
     $('session-list').replaceChildren();
-    $('session-title').textContent = 'MACT';
+    $('session-title').textContent = 'Twarm';
     $('session-location').textContent = 'Sign in to continue';
     $('sessions-status').textContent = 'Sign in to see your sessions.';
     for (const id of ['transcript', 'composer', 'empty', 'disconnect', 'jump-latest']) $(id).hidden = true;
     $('auth').hidden = false;
-    $('auth-title').textContent = authRestore ? 'Unlock your sessions' : 'Sign in to MACT';
+    $('auth-title').textContent = authRestore ? 'Unlock your sessions' : 'Sign in to Twarm';
     updateAuthDescription();
     if (reason === 'logout') $('auth-status').textContent = 'Signed out.';
     showSessions(false);
@@ -1271,7 +1271,7 @@
     const password = sessionAuth?.hasPassword();
     $('auth-description').textContent = authRestore
       ? password ? 'Your running work continues. Sign in to return to the same conversation.' : 'Your running work continues. Use your passkey to return to the same conversation.'
-      : password ? 'Use your MACT Gateway passkey or password to open your sessions.' : 'Use your MACT Gateway passkey to open your sessions.';
+      : password ? 'Use your Twarm Gateway passkey or password to open your sessions.' : 'Use your Twarm Gateway passkey to open your sessions.';
   }
   function sessionMatchesSearch(session, query) {
     return !query || [title(session), session.cwd, session.worker_name, session.runtime_name].some(value => String(value || '').toLocaleLowerCase().includes(query));
@@ -1982,7 +1982,7 @@
       state.items.clear(); state.questions.clear(); state.models = []; state.turn = null; state.cursor = null; state.queuedEvents = [];
       $('messages').replaceChildren(); $('questions').replaceChildren(); $('questions').hidden = true; $('prompt').value = ''; renderAttachmentDraft();
       for (const name of ['transcript', 'composer', 'disconnect', 'jump-latest']) $(name).hidden = true;
-      $('empty').hidden = false; $('session-title').textContent = 'MACT'; $('session-location').textContent = 'Choose a session to continue';
+      $('empty').hidden = false; $('session-title').textContent = 'Twarm'; $('session-location').textContent = 'Choose a session to continue';
       $('workspace-path').textContent = ''; $('usage').textContent = '';
       connection('connected', statusMessage); updateControls();
     }
@@ -3304,7 +3304,7 @@
       disconnect(); state.selected = null; state.items.clear(); state.questions.clear();
       $('messages').replaceChildren(); $('questions').replaceChildren(); $('questions').hidden = true;
       for (const id of ['transcript', 'composer', 'disconnect', 'jump-latest']) $(id).hidden = true;
-      $('empty').hidden = false; $('session-title').textContent = 'MACT'; $('session-location').textContent = 'Choose a session to continue';
+      $('empty').hidden = false; $('session-title').textContent = 'Twarm'; $('session-location').textContent = 'Choose a session to continue';
       notice(result.text || 'Conversation removed from the session list.'); await refreshSessions();
     } else if (state.selected && name === 'rename') {
       state.selected.name = args;

@@ -1,7 +1,7 @@
 # Project website
 
 The public site is hosted at
-[MACT (Multi Agent Control Tower)](https://arizzi74.github.io/MACT/).
+[Twarm (Coding agent control hub)](https://arizzi74.github.io/Twarm/).
 This directory contains the static website and Playwright screenshots of the
 actual Web UI using fictional demo data. It does not connect to a gateway.
 

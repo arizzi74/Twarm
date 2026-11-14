@@ -5,7 +5,7 @@ Open `https://gateway.example.com/tgw/webui/` and sign in with the gateway's adm
 Installed apps and separate browsers can have different login cookies. Console
 and sign-in management links stay under `/tgw/webui/` so navigation can remain
 inside the app instead of opening another browser. This uses the existing app
-scope and does not require reinstalling it. **Open MACT** returns to the chat;
+scope and does not require reinstalling it. **Open Twarm** returns to the chat;
 **Sign out** in the console ends that app/browser's login. Sensitive operations
 can still ask for recent authentication. See Apple's explanation of
 [web-app scope and separate cookies](https://developer.apple.com/videos/play/wwdc2023/10120/).
@@ -78,7 +78,7 @@ directory in one checksummed `.tar.xz` file, then hides the session. It preserve
 native archived state rather than permanently deleting it.
 
 On updated Claude Code workers, **Delete** removes the selected session's Claude
-transcript, associated session files and MACT worker conversation data. Its
+transcript, associated session files and Twarm worker conversation data. Its
 project directory, including any `~/CLAUDE_CODE/<session_name>` folder, is kept.
 Older Claude workers show deletion as unavailable until updated; Claude project
 archive and restore remain unavailable.
@@ -139,7 +139,7 @@ configuration are never copied into the verification process. Its credential
 store is a private file location, so verification does not use the OS keyring.
 
 Successful checks are cached in worker memory, keyed by the exact executable
-contents, runtime version and observed schemas. A worker restart or MACT upgrade
+contents, runtime version and observed schemas. A worker restart or Twarm upgrade
 clears the cache; replacing Codex or changing storage structures invalidates it.
 Every actual archive still receives its own isolated restore verification before
 the original session is archived or its project directory is removed. New
@@ -340,7 +340,7 @@ On iPhone or iPad with iOS/iPadOS 16.4 or newer:
 Apple requires a Home Screen web app and a direct button press before requesting notification permission. Supported Android and desktop browsers use the same notification control. See [WebKit's Web Push requirements](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
 
 On macOS Sonoma 14 or later, open the gateway's `/tgw/webui/` page in Safari and
-choose **File → Add to Dock** (or **Share → Add to Dock**). Name it **MACT** and
+choose **File → Add to Dock** (or **Share → Add to Dock**). Name it **Twarm** and
 choose **Add**. It opens in its own app window from the Dock or Spotlight, using
 the supplied app icon. Open **Settings → Enable notifications** inside that app
 to enable turn-completion alerts. See [Apple's Safari web app instructions](https://support.apple.com/en-us/104996).
@@ -383,7 +383,7 @@ Embedded stylesheet and script URLs include a content fingerprint so a page relo
 
 Installed apps on Mac and iPhone use the same deployed interface; reinstalling
 the app is unnecessary. Open the sidebar (use **☰** on a phone) and select
-**MACT** at the top to load a fresh page. The **↻** beside session search refreshes
+**Twarm** at the top to load a fresh page. The **↻** beside session search refreshes
 only the session list. Copy or send unsent text before reloading; running turns
 continue and a valid browser login remains active.
 
@@ -456,7 +456,7 @@ spaces, wrap the destination in angle brackets:
 inline code also open the download dialog, including in saved Claude replies;
 shell commands and fenced code remain text. Other plain paths and inline code
 are not download links. ChatGPT-style `sandbox:/mnt/data/...` links are
-not worker project paths and are not supported by MACT.
+not worker project paths and are not supported by Twarm.
 
 Absolute paths, paths relative to the session project, home-relative paths and
 local `file:` URLs are resolved by the owning worker. Editor line anchors such

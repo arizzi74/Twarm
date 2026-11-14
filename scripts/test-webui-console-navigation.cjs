@@ -105,6 +105,7 @@ async function checkNavigation(engine, options, label) {
           '/tgw/api/v1/admin/telegram-bots': { bots: [], pending: [] },
           '/tgw/api/v1/webui/sessions': { workers: [], runtimes: [], sessions: [session] },
           '/tgw/api/v1/webui/telegram-bots': { revision: 'fixture-bots', bots: [] },
+          '/tgw/api/v1/webui/question-answers': { answers: [] },
           '/tgw/api/v1/webui/push/config': { supported: false, subscribed: false },
         };
         if (Object.hasOwn(responses, url.pathname)) return json(responses[url.pathname]);
@@ -141,7 +142,7 @@ async function checkNavigation(engine, options, label) {
       await page.waitForURL(origin + consolePath);
       await page.waitForSelector('#console:not([hidden])');
       assert.equal(await page.locator('#auth').isHidden(), true, 'The existing chat session also authorizes the console');
-      assert.equal(await page.locator('link[rel=manifest]').getAttribute('href'), manifestPath, 'The console keeps the installed MACT identity');
+      assert.equal(await page.locator('link[rel=manifest]').getAttribute('href'), manifestPath, 'The console keeps the installed Twarm identity');
     };
     const assertManageDestination = async (target, returnPath = conversationPath) => {
       const destination = new URL(await target.locator('#auth-manage').getAttribute('href'), origin);
@@ -169,11 +170,11 @@ async function checkNavigation(engine, options, label) {
     assert.equal(passkeyPrompts, 1, 'Opening the console does not request another passkey');
     assert.equal(signIns, 1);
     assert.ok(authenticatedReads.some(read => read.path === '/tgw/api/v1/admin/dashboard' && read.cookie === initialCookie.value && read.cookieSource === (engine === webkit ? 'cookie-jar' : 'request-header')), 'The console shares the chat session cookie with the unchanged admin API');
-    await page.getByRole('link', { name: 'Open MACT', exact: true }).click();
+    await page.getByRole('link', { name: 'Open Twarm', exact: true }).click();
     await page.waitForURL(origin + appPath);
     await page.waitForSelector('.session-button', { state: 'attached' });
     assert.equal(await page.locator('#auth').isHidden(), true);
-    assert.equal(createdPages, 1, 'Returning to MACT reuses the current window');
+    assert.equal(createdPages, 1, 'Returning to Twarm reuses the current window');
     assert.equal(passkeyPrompts, 1);
     assert.equal((await context.cookies(origin)).find(cookie => cookie.name === adminCookie).value, initialCookie.value);
 
@@ -190,11 +191,11 @@ async function checkNavigation(engine, options, label) {
     await conversation.waitForSelector('#auth:not([hidden])');
     assert.equal(signOuts, 1);
     assert.equal((await context.cookies(origin)).some(cookie => cookie.name === adminCookie), false, 'Console sign-out removes the shared session cookie');
-    assert.equal(await conversation.locator('#messages article').count(), 0, 'Console sign-out clears the conversation in another MACT window');
+    assert.equal(await conversation.locator('#messages article').count(), 0, 'Console sign-out clears the conversation in another Twarm window');
     assert.equal(await conversation.locator('#prompt').inputValue(), '', 'Console sign-out clears private composer text');
     assert.equal(await conversation.locator('.session-button').count(), 0);
     assert.equal(passkeyPrompts, 1, 'Sign-out never starts a sign-in ceremony');
-    await page.getByRole('link', { name: 'Open MACT', exact: true }).click();
+    await page.getByRole('link', { name: 'Open Twarm', exact: true }).click();
     await page.waitForURL(origin + appPath);
     await page.waitForSelector('#auth:not([hidden])');
     assert.equal(createdPages, 2, 'Sign-out and return create no additional page');
@@ -211,7 +212,7 @@ async function checkNavigation(engine, options, label) {
     assert.equal(await conversation.locator('#messages article').count(), 0, 'Explicit logout clears the previous conversation selection');
     assert.equal(signIns, 2, 'The explicit console sign-in reuses the shared authentication API');
     assert.equal(passkeyPrompts, 2);
-    assert.equal(createdPages, 2, 'Sign-in returns to MACT in the same window');
+    assert.equal(createdPages, 2, 'Sign-in returns to Twarm in the same window');
     assert.deepEqual(errors, []);
     assert.deepEqual(cspViolations, [], 'Navigation works with strict production-style CSP');
     assert.deepEqual(unexpectedRequests, []);

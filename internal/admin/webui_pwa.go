@@ -15,6 +15,8 @@ func (s *Server) webuiPWARoutes() {
 	for _, asset := range []struct{ name, contentType string }{
 		{"webui-notifications.js", "application/javascript; charset=utf-8"},
 		{"webui-icon.svg", "image/svg+xml"},
+		{"twarm_logo.svg", "image/svg+xml"},
+		{"twarm_logo+name.svg", "image/svg+xml"},
 		{"webui-icon-192.png", "image/png"},
 		{"webui-icon-512.png", "image/png"},
 		{"webui-icon-180.png", "image/png"},

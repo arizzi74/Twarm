@@ -1,13 +1,13 @@
 {
   "id": "/tgw/webui/",
-  "name": "MACT · Multi Agent Control Tower",
-  "short_name": "MACT",
+  "name": "Twarm · Coding agent control hub",
+  "short_name": "Twarm",
   "description": "A control hub for coding agents across sessions and machines.",
   "start_url": "/tgw/webui/",
   "scope": "/tgw/webui/",
   "display": "standalone",
-  "background_color": "#111316",
-  "theme_color": "#111316",
+  "background_color": "#0D0F12",
+  "theme_color": "#0D0F12",
   "icons": [
     { "src": "/tgw/webui/static/webui-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "/tgw/webui/static/webui-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

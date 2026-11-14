@@ -17,7 +17,7 @@ func (m *Manager) setupWorkerClaude(ctx context.Context, l *Layout) (string, err
 		binary, err = exec.LookPath(filepath.Join(l.Bin, "claude"))
 	}
 	if err != nil {
-		return "", errors.New("Claude Code is required; install the Claude CLI for this account, then rerun mact setup claude-worker")
+		return "", errors.New("Claude Code is required; install the Claude CLI for this account, then rerun twarm setup claude-worker")
 	}
 	binary, err = filepath.Abs(binary)
 	if err != nil {

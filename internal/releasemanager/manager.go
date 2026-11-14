@@ -68,23 +68,23 @@ type options struct {
 	AutoUpdate, Check                                              bool
 }
 
-const usage = `Install and update MACT from verified GitHub Releases.
+const usage = `Install and update Twarm from verified GitHub Releases.
 
 Usage:
-  mact setup [gateway|worker|claude-worker]
-  mact setup voice [--model base|small] [--threads 1..32]
-  mact finish gateway
-  mact https refresh
-  mact install gateway --config PATH --secrets-env PATH [--auto-update]
-  mact install worker|claude-worker --config PATH [--service-access restricted|full] [--auto-update]
-  mact adopt gateway|worker|claude-worker [--auto-update]
-  mact update gateway|worker|claude-worker [--check]
-  mact update codex|claude [--check]
-  mact request-update worker|claude-worker --request-id UUID --worker-state PATH
-  mact auto-update enable|disable gateway|worker|claude-worker
-  mact version
+  twarm setup [gateway|worker|claude-worker]
+  twarm setup voice [--model base|small] [--threads 1..32]
+  twarm finish gateway
+  twarm https refresh
+  twarm install gateway --config PATH --secrets-env PATH [--auto-update]
+  twarm install worker|claude-worker --config PATH [--service-access restricted|full] [--auto-update]
+  twarm adopt gateway|worker|claude-worker [--auto-update]
+  twarm update gateway|worker|claude-worker [--check]
+  twarm update codex|claude [--check]
+  twarm request-update worker|claude-worker --request-id UUID --worker-state PATH
+  twarm auto-update enable|disable gateway|worker|claude-worker
+  twarm version
 
-The codex-telegramgw command remains supported for compatibility.
+The mact and codex-telegramgw commands remain supported for compatibility.
 Install and update accept --version vMAJOR.MINOR.PATCH and --repo OWNER/REPOSITORY.
 Run gateway administration with sudo and worker administration as its user.
 Setup defaults to gateway under sudo/root and worker otherwise.
@@ -120,7 +120,7 @@ func setupComponent(args []string, uid int) (string, error) {
 	if len(args) == 1 && (args[0] == "gateway" || args[0] == "worker" || args[0] == "claude-worker") {
 		return args[0], nil
 	}
-	return "", errors.New("usage: mact setup [gateway|worker|claude-worker]")
+	return "", errors.New("usage: twarm setup [gateway|worker|claude-worker]")
 }
 
 func parseOptions(args []string) (options, error) {
@@ -131,7 +131,7 @@ func parseOptions(args []string) (options, error) {
 	result.Action = args[0]
 	if result.Action == "auto-update" {
 		if len(args) != 3 || (args[1] != "enable" && args[1] != "disable") {
-			return result, errors.New("usage: mact auto-update enable|disable gateway|worker|claude-worker")
+			return result, errors.New("usage: twarm auto-update enable|disable gateway|worker|claude-worker")
 		}
 		result.Setting = args[1]
 		result.Component = args[2]
@@ -233,13 +233,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer) int {
 		err = New(out).requestWorkerUpdate(ctx, args[1:])
 	} else if args[0] == "https" {
 		if len(args) != 2 || args[1] != "refresh" {
-			err = errors.New("usage: mact https refresh")
+			err = errors.New("usage: twarm https refresh")
 		} else {
 			err = New(out).refreshGatewayHTTPSCommand(ctx)
 		}
 	} else if args[0] == "finish" {
 		if len(args) != 2 || args[1] != "gateway" {
-			err = errors.New("usage: mact finish gateway")
+			err = errors.New("usage: twarm finish gateway")
 		} else {
 			err = New(out).FinishGateway(ctx)
 		}
@@ -379,7 +379,7 @@ func (m *Manager) execute(ctx context.Context, opts options) (retErr error) {
 		}
 		if l.Component == "worker" && l.AgentKind == "claude" {
 			// Recovery pins the worker executable's identity. Resolve its journal
-			// before a MACT release can replace that executable, then resume normal
+			// before a Twarm release can replace that executable, then resume normal
 			// worker and runtime maintenance on the next tick.
 			journal, recoveryErr := loadClaudeRecovery(l)
 			if recoveryErr != nil {

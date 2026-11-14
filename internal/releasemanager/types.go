@@ -15,6 +15,7 @@ type Layout struct {
 	Component, System, Architecture, Home                              string
 	AgentKind                                                          string
 	Bin, Binary, Manager, LegacyManager, Command, AliasCommand         string
+	CompatibilityCommand                                               string
 	Config, Environment, State, Lock, Backups, UnitDir, Unit, DataRoot string
 	WorkerServiceAccess                                                string
 }

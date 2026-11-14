@@ -346,7 +346,7 @@ function telegramBotCard(bot) {
       replace.disabled = telegramBusy;
       actions.append(replace);
     }
-    const reset = button('Reset profile photo >_', 'secondary', () => resetTelegramBotProfilePhoto(bot));
+    const reset = button('Reset Twarm profile photo', 'secondary', () => resetTelegramBotProfilePhoto(bot));
     reset.dataset.botDisabled = String(bot.enabled === false);
     reset.disabled = telegramBusy || bot.enabled === false;
     const photoHelp = el('p', 'muted bot-photo-help', telegramPhotoResetHelp(bot.enabled === false));
@@ -625,11 +625,11 @@ async function toggleTelegramBot(bot) {
 function telegramPhotoResetHelp(disabled) {
   if (disabled) return 'Enable this bot to reset its profile photo.';
   if (telegramBusy) return 'Wait for the current bot action to finish before resetting a profile photo.';
-  return 'Replaces the current Telegram profile photo with the default MACT icon.';
+  return 'Replaces the current Telegram profile photo with the default Twarm icon.';
 }
 async function resetTelegramBotProfilePhoto(bot) {
   if (telegramBusy || !authenticated || !bot.id || bot.enabled === false) return;
-  if (!confirm('Reset the profile photo for ' + telegramBotLabel(bot) + '? This replaces its current Telegram profile photo with the default MACT icon.')) return;
+  if (!confirm('Reset the profile photo for ' + telegramBotLabel(bot) + '? This replaces its current Telegram profile photo with the default Twarm icon.')) return;
   let completed = false;
   await runTelegramAction(async current => {
     $('bot-status').textContent = 'Resetting the profile photo for ' + telegramBotLabel(bot) + '…';
@@ -1798,8 +1798,8 @@ sessionAuth = window.CodexSessionAuth.create({
   },
   onOptions: options => {
     $('password-login').hidden = !options.password;
-    $('auth-title').textContent = options.password ? 'MACT Gateway access' : 'Passkey access';
-    $('auth-description').textContent = options.password ? 'Use a personal passkey or your MACT Gateway password to administer MACT Gateway.' : 'Use a personal passkey to administer MACT Gateway.';
+    $('auth-title').textContent = options.password ? 'Twarm Gateway access' : 'Passkey access';
+    $('auth-description').textContent = options.password ? 'Use a personal passkey or your Twarm Gateway password to administer Twarm Gateway.' : 'Use a personal passkey to administer Twarm Gateway.';
   },
   onVerified: renderCurrentDevice,
   onStatus: value => { msg(value); $('current-device-message').textContent = authenticated ? value : ''; },

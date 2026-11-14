@@ -1,21 +1,21 @@
 # Installation and automatic updates
 
-The MACT installer downloads prebuilt binaries from
-[GitHub Releases](https://github.com/arizzi74/MACT/releases).
+The Twarm installer downloads prebuilt binaries from
+[GitHub Releases](https://github.com/arizzi74/Twarm/releases).
 A Go toolchain, Python and a repository checkout are not required on the target machine.
 Gateway packages support Linux amd64/arm64. Worker and terminal-helper packages
 support Linux and macOS, on amd64/arm64.
 
-Use `mact` to manage an installation. The existing `codex-telegramgw` command is
-still supported and targets the same installation. Service names, configuration
+Use `twarm` to manage an installation. The existing `mact` and
+`codex-telegramgw` commands remain supported and target the same installation. Service names, configuration
 directories and release asset filenames retain their previous names during the
-[MACT migration](mact-migration.md). If another program already owns the `mact`
+[Twarm migration](twarm-migration.md). If another program already owns the `twarm`
 command path, setup leaves it in place and reports the collision; use
 `codex-telegramgw` for this installation instead.
 
-The official repository is now `arizzi74/MACT`. Existing installations that save
-the old repository name can update through the v0.6.21 compatibility manager.
-Official installation requires v0.6.21 or later; see the migration guide for
+The official repository is now `arizzi74/Twarm`. Existing installations that save
+the old repository name can update through the v0.7.32 compatibility manager.
+Installation from the renamed repository requires v0.7.32 or later; see the migration guide for
 recovering an installation that missed that prerequisite.
 
 ## Before installing
@@ -86,7 +86,7 @@ Codex configuration. Empty overrides use native model/reasoning settings and the
 worker's safe workspace / on-request permissions. See
 [Codex worker defaults](admin.md#codex-worker-defaults) for details.
 
-The one-line commands below install the latest stable MACT release. The
+The one-line commands below install the latest stable Twarm release. The
 HTTPS-delivered bootstrap checks a known-good v0.7.10 native manager against
 embedded SHA-256 hashes; that manager verifies signed release provenance and
 all downloaded target packages before installation. GitHub CLI is not required.
@@ -104,10 +104,10 @@ on the `sh` command to a writable directory where execution is permitted.
 Run on the Linux gateway host:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sudo sh -s -- setup gateway
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- setup gateway
 ```
 
-Guided gateway setup installs the latest stable MACT release and enables daily
+Guided gateway setup installs the latest stable Twarm release and enables daily
 automatic updates.
 
 - An existing gateway in the standard location is adopted without replacing
@@ -133,12 +133,12 @@ systemd service, and updater. It uses SQLite, so no separate database server is
 needed. DNS and firewall changes remain your responsibility; the prompts explain
 what is required and let you retry or finish later.
 
-Once installed, use `sudo mact setup gateway` to rerun setup.
+Once installed, use `sudo twarm setup gateway` to rerun setup.
 For an unattended installation using
 custom paths, the explicit command remains available:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sudo sh -s -- install gateway \
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- install gateway \
   --config /path/to/gateway.json \
   --secrets-env /path/to/secrets.env \
   --auto-update
@@ -150,7 +150,7 @@ The fresh guided installation includes these steps. To resume them later, or
 finish an installation made from prepared configuration files, run:
 
 ```sh
-sudo mact finish gateway
+sudo twarm finish gateway
 ```
 
 The wizard offers these HTTPS options:
@@ -193,7 +193,7 @@ The wizard copies the chain and key into its private proxy directory. After
 renewal, refresh those copies and restart only the dedicated proxy with:
 
 ```sh
-sudo mact https refresh
+sudo twarm https refresh
 ```
 
 This command rechecks the original certificate and key files, copies them only
@@ -224,7 +224,7 @@ You can then connect or create additional bots in **Telegram bots** without
 rerunning installation or changing the primary bot's configuration.
 If an existing gateway predates guided administrator setup, the wizard prints
 `sudo codex-telegramgw update gateway`; run that existing command when convenient, then
-run `sudo mact finish gateway` again. Existing administrators can
+run `sudo twarm finish gateway` again. Existing administrators can
 continue signing in while that step is pending.
 
 For manual maintenance, the equivalent gateway administration helper loads the
@@ -253,10 +253,10 @@ the webhook or command menu.
 Run as the developer account that owns Codex and the workspaces:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- setup worker
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker
 ```
 
-Guided worker setup installs the latest stable MACT release and enables daily
+Guided worker setup installs the latest stable Twarm release and enables daily
 automatic updates:
 
 - If saved setup recovery exists, setup resumes that installation with its
@@ -277,8 +277,8 @@ automatic updates:
   another root explicitly when needed.
 
 The prompts use the terminal directly. Without an interactive terminal, provide `worker.json` beforehand.
-Once installed, rerun setup with `mact setup worker`. For a separate Claude
-Code worker, use `mact setup claude-worker`; see [Claude Code workers](claude-code.md).
+Once installed, rerun setup with `twarm setup worker`. For a separate Claude
+Code worker, use `twarm setup claude-worker`; see [Claude Code workers](claude-code.md).
 
 This installs both `codex-worker` and `codex-local` for the current user and sets
 up the worker service. Relative configuration paths are resolved before the
@@ -360,7 +360,7 @@ For unattended installation with a configuration at another location, the
 explicit command is still available:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sh -s -- install worker \
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- install worker \
   --config /path/to/worker.json \
   --auto-update
 ```
@@ -388,8 +388,8 @@ For services already installed in the standard paths, use `adopt` instead of
 update manager:
 
 ```sh
-sudo mact adopt gateway --auto-update
-mact adopt worker --auto-update
+sudo twarm adopt gateway --auto-update
+twarm adopt worker --auto-update
 ```
 
 If the manager is missing, use the same curl command as setup with `adopt gateway
@@ -412,21 +412,21 @@ Python cannot be selected with the new bootstrap.
 
 ```sh
 # Gateway administration:
-sudo mact update gateway --check
-sudo mact update gateway
+sudo twarm update gateway --check
+sudo twarm update gateway
 
 # Worker administration, as its owning user:
-mact update worker --check
-mact update worker
+twarm update worker --check
+twarm update worker
 
 # Check or apply only the worker's Codex runtime maintenance:
-mact update codex --check
-mact update codex
+twarm update codex --check
+twarm update codex
 
 # Dedicated Claude worker and its runtime, as their owning user:
-mact update claude-worker
-mact update claude --check
-mact update claude
+twarm update claude-worker
+twarm update claude --check
+twarm update claude
 ```
 
 Checks fetch release metadata, the checksum manifest, and its signed build
@@ -512,7 +512,7 @@ Use the current bootstrap to run a new manager for this gateway update. Older
 managers continue checking the previous readiness URL even after installing a new binary:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/arizzi74/MACT/main/scripts/install.sh | sudo sh -s -- update gateway
+curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- update gateway
 ```
 
 Reload the matching proxy configuration, then run `gateway webhook set` using
@@ -674,10 +674,10 @@ For explicit `install` and `adopt` commands, pass `--auto-update` to enable it.
 To manage it later:
 
 ```sh
-sudo mact auto-update enable gateway
-sudo mact auto-update disable gateway
-mact auto-update enable worker
-mact auto-update disable worker
+sudo twarm auto-update enable gateway
+sudo twarm auto-update disable gateway
+twarm auto-update enable worker
+twarm auto-update disable worker
 ```
 
 The gateway scheduler runs as a system service; the worker scheduler runs as its
@@ -787,7 +787,7 @@ so later writes cannot be lost through an automatic rollback.
 After installing or updating the gateway, run:
 
 ```sh
-sudo mact setup voice
+sudo twarm setup voice
 ```
 
 This installs the matching `codex-whisper` helper, downloads the multilingual
@@ -799,7 +799,7 @@ gateway updates and their backup/rollback handling; the model is reused.
 To select the larger multilingual small model and three CPU inference threads:
 
 ```sh
-sudo mact setup voice --model small --threads 3
+sudo twarm setup voice --model small --threads 3
 ```
 
 Supported setup models are `base` (148 MB) and `small` (488 MB). Both downloads
