@@ -50,7 +50,7 @@ func archiveJobFixture(t *testing.T) (*Agent, protocol.Runtime, *codextest.Serve
 	}
 	manifest := &sessionarchive.Manifest{ThreadID: session.ThreadID, ThreadIDs: []string{session.ThreadID}, DisplayName: session.Name, OriginalPath: project, CodexVersion: "0.163.0", CreatedAt: time.Now().UTC(), Files: []sessionarchive.Entry{{Path: "project", Kind: "directory", Mode: 0700}}}
 	a.archiveOperations = &sessionArchiveOperations{
-		compatible: func(string) error { return nil },
+		preflight: func(ctx context.Context, _ sessionarchive.PreflightOptions) (context.Context, error) { return ctx, nil },
 		export: func(_ context.Context, options sessionarchive.ExportOptions) (sessionarchive.Manifest, error) {
 			manifest.ArchiveID = options.ArchiveID
 			if err := os.MkdirAll(options.ArchiveDir, 0700); err != nil {
@@ -913,7 +913,9 @@ func TestArchiveCleanupProtectsConfiguredRuntimeStartupDirectory(t *testing.T) {
 
 func TestArchiveRejectsUnsupportedNativeVersionBeforeGuardRPCs(t *testing.T) {
 	a, runtime, server, session, _ := archiveJobFixture(t)
-	a.archiveOperations.compatible = sessionarchive.CheckCompatibility
+	a.archiveOperations.preflight = func(ctx context.Context, o sessionarchive.PreflightOptions) (context.Context, error) {
+		return ctx, sessionarchive.CheckCompatibility(o.CodexVersion)
+	}
 	runtime.CodexVersion = "codex-cli 0.162.0"
 	client, _, _ := a.manager.Client(runtime.ID)
 	a.manager.install(runtime, client)
@@ -928,5 +930,43 @@ func TestArchiveRejectsUnsupportedNativeVersionBeforeGuardRPCs(t *testing.T) {
 	}
 	if hasCall(server.Calls(), "thread/list") || hasCall(server.Calls(), "thread/archive") {
 		t.Fatal("unsupported version reached new inventory or archive APIs")
+	}
+}
+
+func TestArchiveCompatibilityFailureKeepsSessionAndProject(t *testing.T) {
+	for _, reason := range []string{sessionarchive.SchemaChanged, sessionarchive.HistoryChanged, sessionarchive.RuntimeChanged, sessionarchive.ProbeFailed} {
+		t.Run(reason, func(t *testing.T) {
+			a, runtime, server, session, _ := archiveJobFixture(t)
+			var exported atomic.Bool
+			a.archiveOperations.preflight = func(ctx context.Context, o sessionarchive.PreflightOptions) (context.Context, error) {
+				if o.CodexVersion != runtime.CodexVersion || o.SQLiteHome == "" || o.CodexBinary == "" {
+					t.Error("pre-check was not given the selected runtime and storage")
+				}
+				return ctx, &sessionarchive.CompatibilityError{Reason: reason}
+			}
+			a.archiveOperations.export = func(context.Context, sessionarchive.ExportOptions) (sessionarchive.Manifest, error) {
+				exported.Store(true)
+				return sessionarchive.Manifest{}, errors.New("must not export after failed pre-check")
+			}
+			c := agentCommand(runtime, session, protocol.ArchiveSession)
+			c.Arguments.CWD, c.Arguments.SessionArchive = session.CWD, &protocol.SessionArchiveRequest{DeleteProject: true}
+			if _, err := a.HandleCommand(t.Context(), c); err != nil {
+				t.Fatal(err)
+			}
+			record := waitArchiveTerminal(t, a, c.ID)
+			if record.State != CommandFailed || record.Result.Error == nil || record.Result.Error.Code != reason {
+				t.Fatalf("pre-check failure was not reported precisely: %#v", record.Result)
+			}
+			if exported.Load() || hasCall(server.Calls(), "thread/archive") || hasCall(server.Calls(), "thread/list") {
+				t.Fatal("failed pre-check reached export or native archive lifecycle")
+			}
+			if _, err := os.Stat(session.CWD); err != nil {
+				t.Fatalf("failed pre-check removed project: %v", err)
+			}
+			sessions, err := a.store.ListSessions(runtime.ID)
+			if err != nil || len(sessions) != 1 || sessions[0].Archived || sessions[0].Deleted {
+				t.Fatalf("failed pre-check hid the session: %#v %v", sessions, err)
+			}
+		})
 	}
 }

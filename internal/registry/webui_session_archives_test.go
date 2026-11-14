@@ -11,6 +11,20 @@ import (
 	"github.com/iaia/telegramgw/internal/protocol"
 )
 
+func TestSessionArchivePrecheckFailureMessages(t *testing.T) {
+	for _, tc := range []struct{ code, detail string }{
+		{"archive_schema_changed", "storage structures"},
+		{"archive_history_changed", "conversation file format"},
+		{"archive_runtime_changed", "Restart the runtime"},
+		{"archive_precheck_failed", "isolated Codex archive compatibility check"},
+	} {
+		code, message := sessionActionFailure(tc.code, "failed")
+		if code != tc.code || !strings.Contains(message, tc.detail) || !strings.Contains(message, "original data has been kept") {
+			t.Fatalf("pre-check diagnostic lost its safe reason: %s %q", code, message)
+		}
+	}
+}
+
 func archiveEventEnv(t *testing.T) eventTestEnv {
 	t.Helper()
 	e := newEventTestEnv(t)

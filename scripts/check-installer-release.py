@@ -184,6 +184,32 @@ CLAUDE_MCP_ALLOWED = frozenset({
 })
 
 
+ARCHIVE_COMPATIBILITY_ALLOWED = frozenset({
+    '.github/workflows/release.yml',
+    '.github/workflows/native-session-archive.yml',
+    'docs/webui.md',
+    'internal/admin/static/webui.js',
+    'internal/protocol/session_archives.go',
+    'internal/registry/webui_session_archives.go',
+    'internal/registry/webui_session_archives_test.go',
+    'internal/sessionarchive/doc.go',
+    'internal/sessionarchive/native.go',
+    'internal/sessionarchive/preflight.go',
+    'internal/sessionarchive/preflight_test.go',
+    'internal/sessionarchive/preflight_native_test.go',
+    'internal/sessionarchive/preflight_probe.go',
+    'internal/sessionarchive/restore.go',
+    'internal/sessionarchive/types.go',
+    'internal/sessionarchive/validate.go',
+    'internal/sessionarchive/verify.go',
+    'internal/worker/session_archive.go',
+    'internal/worker/session_archive_test.go',
+    'scripts/test-webui-session-management.cjs',
+    'scripts/check-installer-release.py',
+    'scripts/test_ci_installer_release.py',
+})
+
+
 class ScopeError(Exception):
     pass
 
@@ -193,7 +219,7 @@ def git(*arguments, root=ROOT):
 
 
 def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
-    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp"):
+    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility"):
         raise ScopeError("Unknown focused release scope")
     target = STABLE.fullmatch(tag)
     previous = STABLE.fullmatch(baseline)
@@ -212,7 +238,7 @@ def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     names = git("diff", "--name-only", "--no-renames", "-z", base, commit, "--", root=root).split(b"\0")
     changed = {name.decode("utf-8", errors="strict") for name in names if name}
-    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
+    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED, "archive-compatibility": ARCHIVE_COMPATIBILITY_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
     if not changed or changed - allowed:
         raise ScopeError("Focused release contains an empty or out-of-scope change set")
     # Even an allowed path must remain an ordinary file, never executable
@@ -240,7 +266,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("repo", "tag", "baseline", "commit"):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp"), default="installer")
+    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility"), default="installer")
     args = parser.parse_args()
     try:
         changed = validate(args.tag, args.baseline, args.commit, latest_release(args.repo), scope=args.scope)

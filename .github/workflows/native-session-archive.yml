@@ -16,8 +16,15 @@ jobs:
         include:
           - version: '0.163.0'
             sha256: beb339e8ecd9ba057a6bb2dc81ad8ca474812edfbf0fc5056ca818797648dde4
+            tests: '^TestNative(SelfContained|ContinuedTurn|WorkerArchive)'
           - version: '0.165.0'
             sha256: be635d3486a5bd060d0fff582ae6d30160280c31344dd85719707fa920e187f0
+            tests: '^TestNative(SelfContained|ContinuedTurn|WorkerArchive)'
+          # Deliberately absent from the compiled version allowlist: exercise
+          # automatic, request-scoped compatibility and worker deletion/restore.
+          - version: '0.169.0'
+            sha256: 9af4d751fce183faedea629437d5252dbf458eeb04130cf4f97be844621ea985
+            tests: '^TestNative(SelfContainedPreflight|WorkerArchive)'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
@@ -43,4 +50,5 @@ jobs:
         env:
           CODEX_NATIVE_ARCHIVE_TEST: '1'
           CODEX_NATIVE_ARCHIVE_VERSION: ${{ matrix.version }}
-        run: go test ./internal/sessionarchive ./internal/worker -run '^TestNative(SelfContained|ContinuedTurn|WorkerArchive)' -count=1 -timeout=10m
+          ARCHIVE_NATIVE_TEST_PATTERN: ${{ matrix.tests }}
+        run: go test ./internal/sessionarchive ./internal/worker -run "$ARCHIVE_NATIVE_TEST_PATTERN" -count=1 -timeout=10m

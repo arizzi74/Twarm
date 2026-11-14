@@ -1,5 +1,10 @@
-// Native archive compatibility is deliberately limited to the exact validated
-// Codex 0.163.0 and 0.165.0 layouts, with matching source and target versions.
+// Native archive compatibility uses the exact validated Codex 0.163.0 and
+// 0.165.0 schema profiles, with matching source and target versions. New native
+// versions require a request-scoped Preflight proof: the installed binary must
+// preserve synthetic legacy and paginated conversations across isolated
+// export/restore and restart. Only successful, in-memory proofs are cached,
+// bound to executable contents, version and live schemas. Every actual archive
+// is independently verified before the worker permits destructive cleanup.
 // Attached side-thread relationships fail closed pending lifecycle validation.
 // SQLite schemas are fingerprinted per version; no global database or
 // authentication file is copied. Legacy and paginated JSONL are canonical;

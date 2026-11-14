@@ -57,6 +57,7 @@ type Manifest struct {
 type VerifyOptions struct {
 	CodexBinary string
 	Progress    func(string)
+	sentinels   []string // synthetic preflight only; never supplied by an archive
 }
 
 type Entry struct {

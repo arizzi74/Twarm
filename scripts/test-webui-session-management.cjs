@@ -162,6 +162,25 @@ const hostile = '<img src=x onerror="window.injected=true">';
     assert.equal(await selected('b').count(), 1, 'Unsupported archiving leaves the original session available');
     assert.equal(await page.locator('#edit-session-archive').isDisabled(), false, 'A confirmed unsupported result allows an explicit retry');
     assert.equal(posts('archive').filter(row => row.request_id === unsupportedArchive.request_id).length, 1, 'Unsupported archiving is never retried automatically');
+    for (const [code, expected] of [
+      ['archive_schema_changed', 'storage structures differ'],
+      ['archive_history_changed', 'conversation file format differs'],
+      ['archive_runtime_changed', 'Restart the runtime and retry'],
+      ['archive_precheck_failed', 'isolated Codex archive compatibility check']
+    ]) {
+      const request = await waitPost('archive', () => page.locator('#edit-session-archive').click());
+      Object.assign(statuses.get(request.request_id), { pending: true, phase: 'checking_compatibility' });
+      await page.clock.fastForward(1800);
+      await page.waitForFunction(() => document.querySelector('#edit-session-message').textContent.includes('Checking Codex archive compatibility'));
+      Object.assign(statuses.get(request.request_id), { pending: false, status: 'failed', error_code: code, message: 'SECRET arbitrary native backend error' });
+      await page.clock.fastForward(1800);
+      await page.waitForFunction(text => document.querySelector('#edit-session-message').textContent.includes(text), expected);
+      const message = await page.locator('#edit-session-message').textContent();
+      assert.match(message, /original session, project and (any existing )?archive have been kept/);
+      assert.doesNotMatch(message, /SECRET|arbitrary native/);
+      assert.equal(await selected('b').count(), 1, 'Failed pre-check keeps the session');
+      assert.equal(posts('archive').filter(row => row.request_id === request.request_id).length, 1, 'Failed pre-check does not automatically retry');
+    }
     behaviors.archive = 'incompatible-http';
     const rejectedArchive = await waitPost('archive', () => page.locator('#edit-session-archive').click());
     await page.waitForFunction(() => !document.querySelector('#edit-session-archive').disabled);

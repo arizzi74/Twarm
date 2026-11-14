@@ -345,6 +345,14 @@ func sessionActionFailure(code, status string) (string, string) {
 		return code, "The original project path or session already exists. Resolve the conflict before restoring; nothing was overwritten."
 	case "archive_incompatible", "archive_unsupported", protocol.CodexMethodUnsupported:
 		return code, "This archive or Codex version cannot be restored by this worker."
+	case "archive_schema_changed":
+		return code, "Codex storage structures differ from supported archive layouts. The original data has been kept."
+	case "archive_history_changed":
+		return code, "The conversation file format differs from supported archive layouts. The original data has been kept."
+	case "archive_runtime_changed":
+		return code, "The installed Codex executable differs from the running runtime or changed during verification. Restart the runtime and retry. The original data has been kept."
+	case "archive_precheck_failed":
+		return code, "The isolated Codex archive compatibility check did not succeed. The original data has been kept."
 	case "archive_invalid", "archive_corrupt":
 		return code, "The archive failed verification. The original data has been kept."
 	case "archive_not_found":

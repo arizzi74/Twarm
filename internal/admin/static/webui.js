@@ -1602,7 +1602,7 @@
     return '';
   }
   function sessionOperationMessage(result, fallback, kind = '') {
-    const phases = { preparing: 'Preparing the operation on the worker…', exporting: 'Exporting the conversation…', compressing: 'Compressing the project and conversation…', recovering: 'Recovering the operation on the worker…', verifying: 'Verifying the archive…', archiving: 'Archiving the native conversation…', cleaning: 'Removing the original project directory…', extracting: 'Extracting the project files…', restoring: 'Restoring the conversation…' };
+    const phases = { preparing: 'Preparing the operation on the worker…', checking_compatibility: 'Checking Codex archive compatibility…', exporting: 'Exporting the conversation…', compressing: 'Compressing the project and conversation…', recovering: 'Recovering the operation on the worker…', verifying: 'Verifying the archive…', archiving: 'Archiving the native conversation…', cleaning: 'Removing the original project directory…', extracting: 'Extracting the project files…', restoring: 'Restoring the conversation…' };
     if (result?.pending && phases[result.phase]) return phases[result.phase];
     const aliases = { path_exists: 'archive_conflict', archive_unsupported: 'archive_incompatible', codex_method_unsupported: 'archive_incompatible', worker_unavailable: 'worker_offline', archive_busy: 'session_busy', unsupported_operation: 'unsupported', stale_runtime: 'runtime_unavailable', codex_unavailable: 'runtime_unavailable', command_outcome_unknown: 'outcome_unknown' };
     const messages = {
@@ -1611,6 +1611,10 @@
       archive_conflict: 'The original project path already exists. Move that directory on the worker, then explicitly retry the restore. Nothing was overwritten; the archive is kept.',
       path_conflict: 'The original project path already exists. Move that directory on the worker, then explicitly retry the restore. Nothing was overwritten; the archive is kept.',
       archive_incompatible: kind === 'restore' ? 'Restoring this archive requires its original Codex version and a supported session layout. The project and archive have been kept.' : 'The Codex runtime version or session layout is not supported for archiving or restoring. The project and any existing archive have been kept.',
+      archive_schema_changed: 'Codex storage structures differ from supported archive layouts. The original session, project and any existing archive have been kept.',
+      archive_history_changed: 'The conversation file format differs from supported archive layouts. The original session, project and any existing archive have been kept.',
+      archive_runtime_changed: 'The installed Codex executable differs from the running runtime or changed during verification. Restart the runtime and retry. The original session, project and archive have been kept.',
+      archive_precheck_failed: 'The isolated Codex archive compatibility check did not succeed. The original session, project and any existing archive have been kept. Resolve the worker issue, then retry.',
       archive_not_found: 'This archive is no longer available. Refresh the archive list and choose another archive.',
       archive_invalid: 'This archive failed verification. The original project and archive have been kept. Choose another archive or resolve the worker issue before retrying.',
       archive_corrupt: 'This archive failed verification. The original project and archive have been kept. Choose another archive or resolve the worker issue before retrying.',

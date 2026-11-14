@@ -125,12 +125,27 @@ the original project path and resumes the original conversation. An unchanged
 existing project/native session can be reused; different existing data causes a
 conflict instead of being overwritten. The archive remains available after
 restoring. A compatible worker and an allowed original project path are
-required. Archive and restore support **Codex 0.163.0 and 0.165.0**; an
-archive must currently be restored using the same Codex version that created
-it. Sessions with attached side threads are refused until their lifecycle has
-been validated. Unsupported versions and layouts leave the project and any
-existing archive in place. Older workers show an update instruction instead of
-accepting unsupported requests.
+required. Before archiving or restoring, the worker compares the live database
+schemas with the validated **Codex 0.163.0 and 0.165.0 storage layouts**. New
+Codex versions can pass automatically when they use one of those exact layouts
+and an isolated compatibility check succeeds. The check creates synthetic legacy
+and paginated conversations, archives them, deletes their temporary source, and
+verifies that both user and assistant messages can be read after restoring and
+restarting Codex. It uses no account credentials or model calls.
+
+Successful checks are cached in worker memory, keyed by the exact executable
+contents, runtime version and observed schemas. A worker restart or MACT upgrade
+clears the cache; replacing Codex or changing storage structures invalidates it.
+Every actual archive still receives its own isolated restore verification before
+the original session is archived or its project directory is removed. New
+database layouts and conversation modes are refused with specific messages, as
+are installed executables that differ from the running runtime.
+
+An archive must still be restored using the same Codex version that created it.
+Sessions with attached side threads are refused until their lifecycle has been
+validated. Failed checks leave the session, project and any existing archive in
+place. Older workers show an update instruction instead of accepting unsupported
+requests.
 
 Archive and restore run as durable background worker jobs. Closing the dialog,
 switching sessions, losing the network or reloading the page does not repeat or

@@ -21,7 +21,7 @@ import (
 // the snapshot, so a newer thread can never be silently replaced by an old archive.
 func Restore(ctx context.Context, o RestoreOptions) (Manifest, error) {
 	var m Manifest
-	if err := supportedVersion(o.CodexVersion); err != nil {
+	if _, err := schemasFor(ctx, o.CodexVersion); err != nil {
 		return m, err
 	}
 	if o.SQLiteHome == "" {
@@ -55,7 +55,7 @@ func Restore(ctx context.Context, o RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
-	if err := CheckVersionCompatibility(m.CodexVersion, o.CodexVersion); err != nil {
+	if err := CheckVersionCompatibilityContext(ctx, m.CodexVersion, o.CodexVersion); err != nil {
 		return Manifest{}, err
 	}
 	if err := validateNativeSnapshot(ctx, stage, m); err != nil {

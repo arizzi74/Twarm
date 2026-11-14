@@ -32,10 +32,10 @@ var nativeSchemaFingerprints = map[string]map[string]string{
 }
 
 func validateNativeSnapshot(ctx context.Context, stage string, m Manifest) error {
-	if err := supportedVersion(m.CodexVersion); err != nil {
+	schemas, err := schemasFor(ctx, m.CodexVersion)
+	if err != nil {
 		return err
 	}
-	schemas := nativeSchemaFingerprints[nativeVersion(m.CodexVersion)]
 	all, err := scanRollouts(ctx, filepath.Join(stage, "native", "home"))
 	if err != nil {
 		return err
@@ -274,7 +274,10 @@ func nativeSchemaFingerprint(ctx context.Context, db *sql.DB) (string, []string,
 // Validate every existing target DB before publishing a single native file or
 // row. Equal column names alone cannot prove a compatible schema or triggers.
 func validateNativeRestoreTarget(ctx context.Context, o RestoreOptions, m Manifest) error {
-	schemas := nativeSchemaFingerprints[nativeVersion(o.CodexVersion)]
+	schemas, err := schemasFor(ctx, o.CodexVersion)
+	if err != nil {
+		return err
+	}
 	for _, name := range nativeDBs {
 		path := filepath.Join(o.SQLiteHome, name)
 		if _, err := os.Lstat(path); os.IsNotExist(err) {

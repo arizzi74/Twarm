@@ -75,6 +75,25 @@ class InstallerReleaseScopeTest(unittest.TestCase):
             with self.subTest(arguments=arguments), self.assertRaises(POLICY.ScopeError):
                 self.validate(**{"scope": "claude-compaction", **arguments})
 
+    def test_archive_scope_accepts_only_archive_implementation_and_release_controls(self):
+        changed = POLICY.ARCHIVE_COMPATIBILITY_ALLOWED | {f"docs/releases/{self.tag}.md"}
+        self.target(changed)
+        self.assertEqual(self.validate(scope="archive-compatibility"), changed)
+        for name in ("go.mod", "package-lock.json", "internal/audio/audio.go",
+                     "internal/claudeadapter/runtime.go", "scripts/publish-release.py",
+                     ".github/workflows/security.yml", "native/whisper/source.env"):
+            with self.subTest(path=name):
+                self.setUp()
+                self.target(("internal/sessionarchive/preflight.go", name))
+                with self.assertRaises(POLICY.ScopeError):
+                    self.validate(scope="archive-compatibility")
+
+    def test_archive_scope_cannot_bypass_immutable_tag_or_latest_baseline(self):
+        self.target(("internal/sessionarchive/preflight.go",))
+        for arguments in ({"latest": "v1.2.2"}, {"commit": "a" * 40}, {"tag": self.baseline}):
+            with self.subTest(arguments=arguments), self.assertRaises(POLICY.ScopeError):
+                self.validate(**{"scope": "archive-compatibility", **arguments})
+
     def test_usage_scope_allows_only_reviewed_account_polling_and_status_files(self):
         changed = POLICY.USAGE_ALLOWED | {f"docs/releases/{self.tag}.md"}
         self.target(changed)
@@ -230,16 +249,18 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
             "questions": ("webui_questions_only", {"webui-question-tests"}),
             "webui": ("webui_only", {"webui-tests"}),
             "worker-maintenance": ("worker_maintenance_only", {"worker-maintenance-tests"}),
+            "archive-compatibility": (("worker_maintenance_only", "archive_compatibility_only"), {"worker-maintenance-tests", "native-session-archive"}),
         }
         def permits(flags, results):
             rendered = re.sub(r"needs\.release-mode\.outputs\.([a-z_]+)",
                               lambda m: repr("true" if m[1] in flags else "false"), expression)
             rendered = re.sub(r"needs\.([a-z-]+)\.result", lambda m: repr(results[m[1]]), rendered)
             rendered = rendered.replace("always()", "True").replace("cancelled()", "False")
-            rendered = rendered.replace("&&", " and ").replace("||", " or ").replace("!", " not ")
+            rendered = rendered.replace("&&", " and ").replace("||", " or ")
+            rendered = re.sub(r"!(?!=)", " not ", rendered)
             return eval(" ".join(rendered.split()), {"__builtins__": {}}, {})
         for mode, (flag, required) in modes.items():
-            flags = {flag} if flag else set()
+            flags = set(flag) if isinstance(flag, tuple) else ({flag} if flag else set())
             results = {name: "success" if name in required else "skipped" for name in checks}
             results.update({"release-mode": "success", "package": "success", "security": "success"})
             with self.subTest(mode=mode):
@@ -350,6 +371,21 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         self.assertIn("go test -race ./internal/claudeadapter -count=1", job)
         self.assertIn("TestClaudeMCP|Test.*MCP|Test.*UpdateSafety", job)
         self.assertNotIn("test-admin-audio", job)
+
+    def test_archive_modifier_requires_scope_native_proof_and_affected_checks(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn('"$ARCHIVE_COMPATIBILITY_ONLY" == \'true\' && "$WORKER_MAINTENANCE_ONLY" != \'true\'', text)
+        self.assertIn('"$ARCHIVE_COMPATIBILITY_ONLY" == \'true\' && "$CLAUDE_MCP_ONLY" == \'true\'', text)
+        self.assertIn('then scope=archive-compatibility', text)
+        native = text.split("  native-session-archive:\n", 1)[1].split("  native-whisper:\n", 1)[0]
+        self.assertIn("needs.release-mode.outputs.archive_compatibility_only == 'true'", native)
+        job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
+        self.assertIn("go test -race ./internal/sessionarchive -count=1", job)
+        self.assertIn("TestArchive|TestRestore|TestSessionArchive|TestWebUISessionArchive|TestWebUIArchive|TestNativeSelfContained", job)
+        self.assertIn("node scripts/test-webui-session-management.cjs", job)
+        self.assertEqual(job.count("needs.release-mode.outputs.archive_compatibility_only != 'true'"), 3)
+        self.assertNotIn("test-admin-audio", job)
+        self.assertNotIn("npm run test:browser", job)
 
     def test_native_smoke_defaults_and_cache_admission_stay_strict(self):
         for name in ("native-whisper", "native-speech"):

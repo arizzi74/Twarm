@@ -33,24 +33,40 @@ func nativeVersion(version string) string {
 }
 
 func supportedVersion(version string) error {
-	version = nativeVersion(version)
-	if _, ok := nativeSchemaFingerprints[version]; !ok {
-		return fmt.Errorf("%w: Codex version %q has not been validated", ErrUnsupported, version)
-	}
-	return nil
+	_, err := schemasFor(context.Background(), version)
+	return err
 }
 
-// CheckCompatibility lets a worker reject an unvalidated native layout before
-// asking that runtime to perform archive-specific inventory or lifecycle RPCs.
+// schemasFor accepts a new version only inside the request context returned by
+// Preflight. Neither archive metadata nor a cache file can authorize a schema.
+func schemasFor(ctx context.Context, version string) (map[string]string, error) {
+	version = nativeVersion(version)
+	if schemas, ok := nativeSchemaFingerprints[version]; ok {
+		return schemas, nil
+	}
+	if proof, ok := ctx.Value(compatibilityContextKey{}).(*compatibilityProof); ok && proof.version == version {
+		return proof.schemas, nil
+	}
+	return nil, fmt.Errorf("%w: Codex version %q requires an archive compatibility pre-check", ErrUnsupported, version)
+}
+
+// CheckCompatibility checks only the built-in validated versions. Production
+// worker jobs use Preflight to validate the executable and live storage first.
 func CheckCompatibility(version string) error { return supportedVersion(version) }
 
 // CheckVersionCompatibility rejects cross-version imports until native schema
 // migration and replay have been proven for that exact source/target pair.
 func CheckVersionCompatibility(archiveVersion, runtimeVersion string) error {
-	if err := supportedVersion(archiveVersion); err != nil {
+	return CheckVersionCompatibilityContext(context.Background(), archiveVersion, runtimeVersion)
+}
+
+// CheckVersionCompatibilityContext also recognizes a request-scoped preflight
+// proof. Cross-version imports remain unsupported, even with identical schemas.
+func CheckVersionCompatibilityContext(ctx context.Context, archiveVersion, runtimeVersion string) error {
+	if _, err := schemasFor(ctx, archiveVersion); err != nil {
 		return err
 	}
-	if err := supportedVersion(runtimeVersion); err != nil {
+	if _, err := schemasFor(ctx, runtimeVersion); err != nil {
 		return err
 	}
 	if nativeVersion(archiveVersion) != nativeVersion(runtimeVersion) {
@@ -248,6 +264,7 @@ func readRolloutMetadata(ctx context.Context, r *rollout) error {
 		Type    string `json:"type"`
 		Payload struct {
 			ID          string `json:"id"`
+			HistoryMode string `json:"history_mode"`
 			HistoryBase *struct {
 				ThreadID string `json:"thread_id"`
 				End      int64  `json:"end_byte_offset"`
@@ -256,6 +273,9 @@ func readRolloutMetadata(ctx context.Context, r *rollout) error {
 	}
 	if err := json.Unmarshal(scanner.Bytes(), &meta); err != nil || meta.Type != "session_meta" || meta.Payload.ID != r.owner {
 		return fmt.Errorf("invalid native rollout metadata: %s", r.path)
+	}
+	if mode := meta.Payload.HistoryMode; mode != "" && mode != "legacy" && mode != "paginated" {
+		return &CompatibilityError{Reason: HistoryChanged}
 	}
 	if meta.Payload.HistoryBase != nil {
 		r.base = meta.Payload.HistoryBase.ThreadID
@@ -362,7 +382,7 @@ func scanRollouts(ctx context.Context, home string) (map[string]*rollout, error)
 }
 
 func exportNative(ctx context.Context, o ExportOptions, stage string, m *Manifest) error {
-	if err := supportedVersion(o.CodexVersion); err != nil {
+	if _, err := schemasFor(ctx, o.CodexVersion); err != nil {
 		return err
 	}
 	ids, err := threadTree(ctx, o.SQLiteHome, o.ThreadID)

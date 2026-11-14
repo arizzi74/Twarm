@@ -98,7 +98,7 @@ func (r *SessionArchiveResult) Validate() error {
 		return errors.New("invalid retained project path")
 	}
 	switch r.Phase {
-	case "", "preparing", "exporting", "compressing", "verifying", "archiving", "cleaning", "extracting", "restoring", "completed", "recovering":
+	case "", "preparing", "checking_compatibility", "exporting", "compressing", "verifying", "archiving", "cleaning", "extracting", "restoring", "completed", "recovering":
 	default:
 		return errors.New("invalid archive phase")
 	}

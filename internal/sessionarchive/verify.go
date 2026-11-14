@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -49,12 +50,15 @@ func Verify(ctx context.Context, archivePath string, o VerifyOptions) (Manifest,
 			cancel()
 			return Manifest{}, err
 		}
-		err = verifyRestoredThreads(client, m, project, pass+1)
+		err = verifyRestoredThreads(client, m, project, pass+1, o.sentinels...)
 		client.close()
 		cancel()
 		if err != nil {
 			return Manifest{}, err
 		}
+	}
+	if err := verifyExecutableVersion(ctx, o.CodexBinary, m.CodexVersion, root); err != nil {
+		return Manifest{}, err
 	}
 	m.VerifiedSelfContained = true
 	return m, nil
@@ -88,6 +92,16 @@ func verifyExecutableVersion(ctx context.Context, binary, archiveVersion, root s
 		}
 		return fmt.Errorf("%w: the selected Codex executable's version could not be confirmed", ErrUnsupported)
 	}
+	if nativeVersion(string(output.data)) != nativeVersion(archiveVersion) {
+		return &CompatibilityError{Reason: RuntimeChanged}
+	}
+	if proof, ok := ctx.Value(compatibilityContextKey{}).(*compatibilityProof); ok {
+		digest, err := executableDigest(ctx, binary)
+		if err != nil || digest != proof.binaryDigest || proof.version != nativeVersion(archiveVersion) {
+			return &CompatibilityError{Reason: RuntimeChanged}
+		}
+		return nil
+	}
 	return CheckVersionCompatibility(archiveVersion, string(output.data))
 }
 
@@ -109,7 +123,7 @@ func (o *verificationVersionOutput) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-func verifyRestoredThreads(client *verificationServer, m Manifest, project string, pass int) error {
+func verifyRestoredThreads(client *verificationServer, m Manifest, project string, pass int, sentinels ...string) error {
 	check := func(id string, parent bool) error {
 		method, operation := "thread/read", "subagent read"
 		params := map[string]any{"threadId": id, "includeTurns": false}
@@ -142,6 +156,16 @@ func verifyRestoredThreads(client *verificationServer, m Manifest, project strin
 		var history json.RawMessage
 		if err := client.call("thread/turns/list", map[string]any{"threadId": id, "limit": 1, "itemsView": "notLoaded"}, &history); err != nil {
 			return fmt.Errorf("native history read pass %d for thread %s: %w", pass, id, err)
+		}
+		if parent && len(sentinels) > 0 {
+			if err := client.call("thread/turns/list", map[string]any{"threadId": id, "limit": 1, "itemsView": "full", "sortDirection": "asc"}, &history); err != nil {
+				return err
+			}
+			for _, sentinel := range sentinels {
+				if !strings.Contains(string(history), sentinel) {
+					return fmt.Errorf("synthetic history did not preserve %q", sentinel)
+				}
+			}
 		}
 		return nil
 	}
