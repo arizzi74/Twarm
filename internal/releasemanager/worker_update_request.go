@@ -204,6 +204,14 @@ func (m *Manager) requestedWorkerReleaseStep(ctx context.Context, l *Layout, pla
 				return protocol.WorkerUpdateResult{}, err
 			}
 		}
+		// A pre-migration manager can install this binary using its old alias
+		// layout. Complete the new aliases even on a same-version queue check,
+		// after any pending readiness check has succeeded.
+		if comparison == 0 {
+			if err := m.installManagerAlias(l); err != nil {
+				return protocol.WorkerUpdateResult{}, err
+			}
+		}
 		return protocol.WorkerUpdateResult{State: "up_to_date", Version: installed}, nil
 	}
 	if plan.packages == nil {

@@ -21,13 +21,13 @@ type bootstrapFixture struct {
 	key                                                    ed25519.PrivateKey
 }
 
-// Independently checked against the published v0.7.10 SHA256SUMS manifest, whose
-// SHA256 is 5c24e4581f704bceb1f4c54e1a0efb9af11badc72714d10a15b676138071b8f3.
+// Independently checked against the published v0.7.32 SHA256SUMS manifest, whose
+// SHA256 is 4957ea536a64fe92b8bd67cbcdd939a4b1f0452f7708955c0ad58f06845c82fd.
 var bootstrapPins = map[string]string{
-	"linux-amd64":  "14679733a214051917367b297c2b1053f8a9aff2aca3ae1ac15382b967887c96",
-	"linux-arm64":  "50644f55ac39030140e2de84387f71ba397f7c8285037e3e33d6756a00a958cb",
-	"darwin-amd64": "0ef44ca5d470166944ef71d17657a51800a3d7defeaf0351012c24110992abf1",
-	"darwin-arm64": "af5085990b286575c98ac839112a2b6d6c232d8b8cd097812bd5eef52dc4d7cc",
+	"linux-amd64":  "59107b15918bb155ed4bae2a10c9e5d6890a63d73d2ade7b1ef58d53fd7868ae",
+	"linux-arm64":  "edf09680c6d231b54455f43fd0ecb6bb3caf47ac9278c01d7a07c501921beb4c",
+	"darwin-amd64": "651298e4197a147427b42ed82dda0299dcc994efbf9a7979462004bbb5465149",
+	"darwin-arm64": "e277bda2339f04886932307fe9c79d626673bdce2857f30091a421ac3ac64a50",
 }
 
 func bootstrapTestFixture(t *testing.T) bootstrapFixture {
@@ -169,7 +169,7 @@ esac
 		"TEST_PROBES=" + filepath.Join(root, "probes"), "TEST_INVOCATIONS=" + filepath.Join(root, "invocations"), "TEST_TMPDIR_RECORD=" + filepath.Join(root, "manager-tmpdir"),
 		"TEST_MANIFEST=" + manifestPath, "TEST_MANAGER=" + managerPath,
 		"TEST_PROVENANCE=" + provenancePath, "TEST_REAL_CHMOD=" + chmod, "TEST_CHMODS=" + filepath.Join(root, "chmods"),
-		"TEST_RELEASE_URL=https://github.com/arizzi74/MACT/releases/tag/v1.2.3",
+		"TEST_RELEASE_URL=https://github.com/arizzi74/Twarm/releases/tag/v1.2.3",
 	}}
 	return fixture
 }
@@ -185,7 +185,7 @@ func TestBootstrapProductionPinsRejectSubstitutedManagersOnEveryPlatform(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(script), "bootstrap_version=v0.7.10\n") || len(bootstrapPins) != len(Targets()) {
+	if !strings.Contains(string(script), "bootstrap_version=v0.7.32\n") || len(bootstrapPins) != len(Targets()) {
 		t.Fatal("bootstrap version or supported target pins changed")
 	}
 	for _, target := range Targets() {
@@ -237,7 +237,7 @@ func TestBootstrapWorksWithoutGhPythonOrGoAndPreservesArguments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "https://github.com/arizzi74/MACT/releases/latest\nhttps://github.com/arizzi74/MACT/releases/download/v0.7.10/codex-telegramgw-linux-amd64\n"
+	want := "https://github.com/arizzi74/Twarm/releases/latest\nhttps://github.com/arizzi74/Twarm/releases/download/v0.7.32/codex-telegramgw-linux-amd64\n"
 	if string(requests) != want {
 		t.Fatalf("wrong release requests: %s", requests)
 	}
@@ -544,7 +544,7 @@ func TestBootstrapSelectsTargetVersionAndRepositoryIndependentlyOfPinnedManager(
 			if !strings.Contains(strings.Join(args, " "), "--version") {
 				selection = "latest"
 			}
-			want := "https://github.com/owner/repository/releases/" + selection + "\nhttps://github.com/arizzi74/MACT/releases/download/v0.7.10/codex-telegramgw-linux-amd64\n"
+			want := "https://github.com/owner/repository/releases/" + selection + "\nhttps://github.com/arizzi74/Twarm/releases/download/v0.7.32/codex-telegramgw-linux-amd64\n"
 			if string(requests) != want {
 				t.Fatalf("target selection changed bootstrap repository/version: %s", requests)
 			}
@@ -576,10 +576,10 @@ func TestBootstrapRejectsInvalidSelectionBeforeNetwork(t *testing.T) {
 
 func TestBootstrapRejectsUnexpectedLatestRedirect(t *testing.T) {
 	for _, url := range []string{
-		"https://github.com/arizzi74/MACT/releases/tag/v1.2.3-rc1",
-		"http://github.com/arizzi74/MACT/releases/tag/v1.2.3",
+		"https://github.com/arizzi74/Twarm/releases/tag/v1.2.3-rc1",
+		"http://github.com/arizzi74/Twarm/releases/tag/v1.2.3",
 		"https://github.com/attacker/repo/releases/tag/v1.2.3",
-		"https://github.com/arizzi74/MACT/releases/tag/extra/v1.2.3",
+		"https://github.com/arizzi74/Twarm/releases/tag/extra/v1.2.3",
 		"https://github.com/arizzi74/Codex-Telegram-Gateway/releases/tag/v1.2.3",
 	} {
 		t.Run(url, func(t *testing.T) {
@@ -599,7 +599,7 @@ func TestBootstrapFollowsOnlyOfficialRenameForLatestAndPinnedReleases(t *testing
 	for _, pinned := range []bool{false, true} {
 		t.Run(fmt.Sprint(pinned), func(t *testing.T) {
 			fixture := bootstrapTestFixture(t)
-			resolved := "https://github.com/arizzi74/MACT/releases/tag/v1.2.3"
+			resolved := "https://github.com/arizzi74/Twarm/releases/tag/v1.2.3"
 			fixture.environment[len(fixture.environment)-1] = "TEST_RELEASE_URL=" + resolved
 			arguments := []string{"install", "worker", "--config", "/tmp/worker.json", "--repo", "arizzi74/Codex-Telegram-Gateway"}
 			if pinned {
@@ -622,7 +622,7 @@ func TestBootstrapFollowsOnlyOfficialRenameForLatestAndPinnedReleases(t *testing
 				t.Fatalf("legacy selection did not resolve through its original URL: %s", requests[0])
 			}
 			for _, request := range requests[1:] {
-				if !strings.HasPrefix(request, "https://github.com/arizzi74/MACT/releases/download/v0.7.10/") {
+				if !strings.HasPrefix(request, "https://github.com/arizzi74/Twarm/releases/download/v0.7.32/") {
 					t.Fatalf("asset did not use canonical renamed repository: %s", request)
 				}
 			}
@@ -632,10 +632,10 @@ func TestBootstrapFollowsOnlyOfficialRenameForLatestAndPinnedReleases(t *testing
 
 func TestBootstrapRenameDoesNotChangeForkSelectionOrPinnedTag(t *testing.T) {
 	for _, tc := range []struct{ name, repo, resolved string }{
-		{"fork remains independent", "owner/fork", "https://github.com/arizzi74/MACT/releases/tag/v1.2.3"},
-		{"rename cannot change pinned tag", "arizzi74/Codex-Telegram-Gateway", "https://github.com/arizzi74/MACT/releases/tag/v2.0.0"},
-		{"rename cannot change owner", "arizzi74/Codex-Telegram-Gateway", "https://github.com/attacker/MACT/releases/tag/v1.2.3"},
-		{"rename cannot add URL suffix", "arizzi74/Codex-Telegram-Gateway", "https://github.com/arizzi74/MACT/releases/tag/v1.2.3?other"},
+		{"fork remains independent", "owner/fork", "https://github.com/arizzi74/Twarm/releases/tag/v1.2.3"},
+		{"rename cannot change pinned tag", "arizzi74/Codex-Telegram-Gateway", "https://github.com/arizzi74/Twarm/releases/tag/v2.0.0"},
+		{"rename cannot change owner", "arizzi74/Codex-Telegram-Gateway", "https://github.com/attacker/Twarm/releases/tag/v1.2.3"},
+		{"rename cannot add URL suffix", "arizzi74/Codex-Telegram-Gateway", "https://github.com/arizzi74/Twarm/releases/tag/v1.2.3?other"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fixture := bootstrapTestFixture(t)
@@ -651,18 +651,18 @@ func TestBootstrapRenameDoesNotChangeForkSelectionOrPinnedTag(t *testing.T) {
 }
 
 func TestBootstrapRejectsPrebridgeReleasesOnlyAfterOfficialRename(t *testing.T) {
-	for _, tag := range []string{"v0.0.0", "v0.5.99", "v0.6.0", "v0.6.9", "v0.6.19", "v0.6.20", "v0.6.21", "v0.6.100", "v0.7.0", "v1.0.0"} {
+	for _, tag := range []string{"v0.0.0", "v0.5.99", "v0.6.0", "v0.6.9", "v0.6.19", "v0.6.20", "v0.6.21", "v0.6.100", "v0.7.0", "v0.7.9", "v0.7.19", "v0.7.29", "v0.7.30", "v0.7.31", "v0.7.32", "v0.7.100", "v0.8.0", "v1.0.0"} {
 		t.Run(tag, func(t *testing.T) {
 			fixture := bootstrapTestFixture(t)
-			fixture.environment = append(fixture.environment, "TEST_PINNED_RELEASE_URL=https://github.com/arizzi74/MACT/releases/tag/"+tag)
+			fixture.environment = append(fixture.environment, "TEST_PINNED_RELEASE_URL=https://github.com/arizzi74/Twarm/releases/tag/"+tag)
 			output, err := fixture.run("install", "worker", "--config", "/tmp/worker.json", "--version", tag)
-			allowed := tag == "v0.6.21" || tag == "v0.6.100" || tag == "v0.7.0" || tag == "v1.0.0"
+			allowed := tag == "v0.7.32" || tag == "v0.7.100" || tag == "v0.8.0" || tag == "v1.0.0"
 			if allowed {
 				if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 17 {
 					t.Fatalf("compatible manager rejected: %v %s", err, output)
 				}
 			} else {
-				if err == nil || !strings.Contains(string(output), "install v0.6.21 or newer") {
+				if err == nil || !strings.Contains(string(output), "install v0.7.32 or newer") {
 					t.Fatalf("missing prebridge explanation: %v %s", err, output)
 				}
 				if _, err := os.Stat(filepath.Join(fixture.root, "record")); !os.IsNotExist(err) {
@@ -678,12 +678,12 @@ func TestBootstrapRejectsPrebridgeReleasesOnlyAfterOfficialRename(t *testing.T) 
 	// The guard is specific to canonical target releases, including renamed URLs.
 	fixture := bootstrapTestFixture(t)
 	output, err := fixture.run("install", "worker", "--config", "/tmp/worker.json", "--repo", "arizzi74/Codex-Telegram-Gateway", "--version", "v0.6.20")
-	if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 17 {
-		t.Fatalf("unrenamed legacy repository rejected: %v %s", err, output)
+	if err == nil || !strings.Contains(string(output), "install v0.7.32 or newer") {
+		t.Fatalf("legacy repository executed a prebridge manager: %v %s", err, output)
 	}
 	fixture = bootstrapTestFixture(t)
-	output, err = fixture.run("install", "worker", "--config", "/tmp/worker.json", "--repo", "arizzi74/MACT", "--version", "v0.6.20")
-	if err == nil || !strings.Contains(string(output), "install v0.6.21 or newer") {
+	output, err = fixture.run("install", "worker", "--config", "/tmp/worker.json", "--repo", "arizzi74/Twarm", "--version", "v0.6.20")
+	if err == nil || !strings.Contains(string(output), "install v0.7.32 or newer") {
 		t.Fatalf("explicit canonical repository executed prebridge manager: %v %s", err, output)
 	}
 	fixture = bootstrapTestFixture(t)
@@ -755,7 +755,7 @@ func TestBootstrapSelectsEverySupportedPlatform(t *testing.T) {
 				t.Fatalf("platform selection failed: %v %s", err, output)
 			}
 			requests, err := os.ReadFile(filepath.Join(fixture.root, "requests"))
-			if err != nil || !strings.HasSuffix(string(requests), "https://github.com/arizzi74/MACT/releases/download/v0.7.10/"+target.ManagerAsset()+"\n") {
+			if err != nil || !strings.HasSuffix(string(requests), "https://github.com/arizzi74/Twarm/releases/download/v0.7.32/"+target.ManagerAsset()+"\n") {
 				t.Fatalf("wrong manager asset: %s %v", requests, err)
 			}
 		})
@@ -954,7 +954,7 @@ func TestDocumentedInstallerRejectsUnauthenticatedManagerBeforeExecution(t *test
 				if strings.HasPrefix(scenario, "wrong ") {
 					fixture.signClaim(t, claim)
 				}
-				cmd := exec.Command("/bin/sh", "-c", command+"\n[ -n \"$MACT_INSTALLER_DIR\" ] || exit 1\n\"$MACT_INSTALLER_DIR/install\" setup "+component)
+				cmd := exec.Command("/bin/sh", "-c", command+"\n[ -n \"$TWARM_INSTALLER_DIR\" ] || exit 1\n\"$TWARM_INSTALLER_DIR/install\" setup "+component)
 				cmd.Env = fixture.environment
 				if output, err := cmd.CombinedOutput(); err == nil {
 					t.Fatalf("accepted unauthenticated installer: %s", output)
@@ -986,10 +986,10 @@ func documentedInstallerCommand(t *testing.T) string {
 		t.Fatal("missing installation command")
 	}
 	command := strings.SplitN(block[1], "```", 2)[0]
-	if strings.Count(command, "version=v0.7.10") != 1 {
+	if strings.Count(command, "version=v0.7.32") != 1 {
 		t.Fatal("missing explicit stable installer version")
 	}
-	command = strings.Replace(command, "version=v0.7.10", "version=v1.2.3", 1)
+	command = strings.Replace(command, "version=v0.7.32", "version=v1.2.3", 1)
 	return command
 }
 
@@ -1017,7 +1017,7 @@ func TestDocumentedInstallerAuthenticatesBeforeExecution(t *testing.T) {
 			}
 			// The documented assignment is tested literally. Its failure leaves no
 			// callable install path even if a terminal user continues to the next command.
-			cmd := exec.Command("/bin/sh", "-c", command+"\n[ -n \"$MACT_INSTALLER_DIR\" ] || exit 1\n\"$MACT_INSTALLER_DIR/install\" setup worker")
+			cmd := exec.Command("/bin/sh", "-c", command+"\n[ -n \"$TWARM_INSTALLER_DIR\" ] || exit 1\n\"$TWARM_INSTALLER_DIR/install\" setup worker")
 			cmd.Env = fixture.environment
 			output, err := cmd.CombinedOutput()
 			if scenario == "authenticated" {
@@ -1105,5 +1105,48 @@ func TestDocumentedInstallerRejectsVerifierWithoutRequiredPolicyFlags(t *testing
 	}
 	if _, err := os.Stat(filepath.Join(fixture.root, "record")); !os.IsNotExist(err) {
 		t.Fatal("executed manager without complete publisher verification")
+	}
+}
+
+func TestTwarmBootstrapScopesBothHistoricalNamesWithoutReverseRedirects(t *testing.T) {
+	for _, tc := range []struct {
+		requested, destination string
+		allowed                bool
+	}{
+		{"arizzi74/Codex-Telegram-Gateway", "arizzi74/MACT", true},
+		{"arizzi74/Codex-Telegram-Gateway", "arizzi74/Twarm", true},
+		{"arizzi74/MACT", "arizzi74/Twarm", true},
+		{"arizzi74/MACT", "arizzi74/MACT", true},
+		{"arizzi74/Twarm", "arizzi74/MACT", false},
+		{"owner/fork", "arizzi74/Twarm", false},
+	} {
+		for _, pinned := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/%s/pinned=%v", tc.requested, tc.destination, pinned), func(t *testing.T) {
+				fixture := bootstrapTestFixture(t)
+				resolved := "https://github.com/" + tc.destination + "/releases/tag/v1.2.3"
+				fixture.environment = append(fixture.environment, "TEST_RELEASE_URL="+resolved, "TEST_PINNED_RELEASE_URL="+resolved)
+				args := []string{"setup", "worker", "--repo", tc.requested}
+				if pinned {
+					args = append(args, "--version", "v1.2.3")
+				}
+				output, err := fixture.run(args...)
+				if tc.allowed {
+					if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 17 {
+						t.Fatalf("official redirect rejected: %v %s", err, output)
+					}
+					requests, e := os.ReadFile(filepath.Join(fixture.root, "requests"))
+					if e != nil || !strings.HasSuffix(string(requests), "https://github.com/arizzi74/Twarm/releases/download/v0.7.32/codex-telegramgw-linux-amd64\n") {
+						t.Fatalf("bootstrap escaped its pinned Twarm source: %s %v", requests, e)
+					}
+				} else {
+					if err == nil {
+						t.Fatalf("unapproved redirect accepted: %s", output)
+					}
+					if _, e := os.Stat(filepath.Join(fixture.root, "record")); !os.IsNotExist(e) {
+						t.Fatal("unapproved redirect executed installer")
+					}
+				}
+			})
+		}
 	}
 }

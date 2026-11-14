@@ -128,7 +128,7 @@ async function prepare(page, pendingQuestions = true) {
     await mobile.screenshot({ path: path.join(output, 'webui-mobile-sessions.png'), animations: 'disabled' });
     const hashes = {};
     for (const name of ['webui.html', 'webui.css', 'webui.js', 'twarm_logo.svg', 'twarm_logo+name.svg']) hashes[name] = crypto.createHash('sha256').update(fs.readFileSync(path.join(assets, name))).digest('hex');
-    fs.writeFileSync(path.join(output, 'capture.json'), JSON.stringify({ captured_at: new Date().toISOString(), product: 'Twarm', release: '0.7.32', demo_data: true, description: 'Actual embedded Twarm WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.', source_sha256: hashes, images: { 'webui-desktop.png': { width: 1440, height: 980 }, 'webui-mobile.png': { width: 390, height: 844 }, 'webui-mobile-sessions.png': { width: 390, height: 844 } } }, null, 2) + '\n');
+    fs.writeFileSync(path.join(output, 'capture.json'), JSON.stringify({ captured_at: new Date().toISOString(), product: 'Twarm', release: '0.7.33', demo_data: true, description: 'Actual embedded Twarm WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.', source_sha256: hashes, images: { 'webui-desktop.png': { width: 1440, height: 980 }, 'webui-mobile.png': { width: 390, height: 844 }, 'webui-mobile-sessions.png': { width: 390, height: 844 } } }, null, 2) + '\n');
     console.log('Captured actual desktop, mobile conversation, and mobile session drawer screenshots with fictional demo data.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

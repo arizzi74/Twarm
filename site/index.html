@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0D0F12">
-  <meta name="description" content="Twarm 0.7.32 brings Codex and Claude Code into one control hub. Manage dedicated workers across servers, switch sessions from the web or Telegram, and follow reported usage.">
+  <meta name="description" content="Twarm 0.7.33 brings Codex and Claude Code into one control hub. Manage dedicated workers across servers, switch sessions from the web or Telegram, and follow reported usage.">
   <meta property="og:title" content="Twarm — Coding agent control hub">
-  <meta property="og:description" content="Codex and Claude Code, supported today through dedicated workers. One web interface or Telegram bot for your coding agent sessions across servers. Available in Twarm 0.7.32.">
+  <meta property="og:description" content="Codex and Claude Code, supported today through dedicated workers. One web interface or Telegram bot for your coding agent sessions across servers. Available in Twarm 0.7.33.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://arizzi74.github.io/Twarm/">
   <meta property="og:image" content="https://arizzi74.github.io/Twarm/assets/screenshots/webui-desktop.png">
@@ -26,7 +26,7 @@
   <main id="main">
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <a class="release-pill" href="https://github.com/arizzi74/Twarm/releases/tag/v0.7.32"><span class="status-dot" aria-hidden="true"></span>v0.7.32<span class="pill-divider" aria-hidden="true">/</span>Codex + Claude Code<span aria-hidden="true">↗</span></a>
+        <a class="release-pill" href="https://github.com/arizzi74/Twarm/releases/tag/v0.7.33"><span class="status-dot" aria-hidden="true"></span>v0.7.33<span class="pill-divider" aria-hidden="true">/</span>Codex + Claude Code<span aria-hidden="true">↗</span></a>
         <h1 id="hero-title">Your coding agent<br><span>control hub.</span></h1>
         <p class="hero-description">Boost your development workflow with a single control hub for coding agents. Codex and Claude Code are supported today through dedicated workers. Switch between sessions, follow tool activity and reported usage, and manage multiple coding agent installations across servers from one web interface or Telegram bot.</p>
         <div class="hero-actions"><a class="button button-primary" href="#install">Installation <span aria-hidden="true">→</span></a><a class="button button-secondary" href="https://github.com/arizzi74/Twarm">View on GitHub <span aria-hidden="true">↗</span></a></div>
@@ -52,7 +52,7 @@
     </section>
 
     <section id="agents" class="agents-section wrap" aria-labelledby="agents-title">
-      <div class="section-topline"><div><span class="small-label">SUPPORTED IN 0.7.32</span><h2 id="agents-title">Codex + Claude Code.<br><span>Dedicated workers. One hub.</span></h2></div><p>Use either provider, or run both on the same host with separate worker identities, services, accounts, and state.</p></div>
+      <div class="section-topline"><div><span class="small-label">SUPPORTED IN 0.7.33</span><h2 id="agents-title">Codex + Claude Code.<br><span>Dedicated workers. One hub.</span></h2></div><p>Use either provider, or run both on the same host with separate worker identities, services, accounts, and state.</p></div>
       <div class="agent-cards"><article class="agent-card"><span class="small-label">CODEX WORKER</span><h3>Codex</h3><p>Shared Codex app-server sessions with streaming replies, tools, approvals, active-turn steering, and usage indicators.</p><p>Continue the same session with <code>twarm terminal</code>. Project archive and restore are available for Codex workers.</p></article><article class="agent-card"><span class="small-label">CLAUDE WORKER</span><h3>Claude Code</h3><p>Create and resume independent Claude sessions, stream replies and tool activity, answer approvals and questions, and queue follow-ups after the current turn.</p><p>Manage the worker’s model, API endpoint, authentication, and tool permission mode in the admin console. Delete an idle conversation while keeping its project files.</p></article></div>
       <p class="agent-note">Claude follow-ups are queued, not steered into the active turn. Shared local terminal attachment and project archive/restore remain Codex-only. Claude usage and account balance stay unknown until reported; balance availability depends on the API provider. <a href="https://github.com/arizzi74/Twarm/blob/main/docs/claude-code.md">Read the Claude Code guide <span aria-hidden="true">↗</span></a></p>
     </section>
@@ -74,7 +74,7 @@
     </section>
 
     <section id="install" class="install-section wrap" aria-labelledby="install-title">
-      <div class="install-intro"><span class="small-label">INSTALLATION · 0.7.32</span><h2 id="install-title">Guided setup<br><span>for each service.</span></h2><p>Run one command to install the latest stable Twarm release. Start with Twarm Gateway. Enroll a separate worker for each Codex or Claude Code installation in the admin console, then run its setup on the machine where your projects live.</p><a class="text-link" href="https://github.com/arizzi74/Twarm/blob/main/docs/installation.md">Read the installation guide <span aria-hidden="true">→</span></a></div>
+      <div class="install-intro"><span class="small-label">INSTALLATION · 0.7.33</span><h2 id="install-title">Guided setup<br><span>for each service.</span></h2><p>Run one command to install the latest stable Twarm release. Start with Twarm Gateway. Enroll a separate worker for each Codex or Claude Code installation in the admin console, then run its setup on the machine where your projects live.</p><a class="text-link" href="https://github.com/arizzi74/Twarm/blob/main/docs/installation.md">Read the installation guide <span aria-hidden="true">→</span></a></div>
       <div class="install-steps">
         <article class="install-card"><div class="install-heading"><span class="step-number">1</span><div><h3>Install Twarm Gateway</h3><p>Linux with systemd · run on your gateway server</p></div></div><div class="command-block"><code id="gateway-command">curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sudo sh -s -- setup gateway</code><button type="button" class="copy-button" data-copy="gateway-command" aria-label="Copy gateway install command">Copy <span aria-hidden="true">⧉</span></button></div><p class="install-hint">Have your domain, Telegram bot token, and numeric Telegram user ID ready. The wizard guides HTTPS and passkey setup.</p></article>
         <article class="install-card"><div class="install-heading"><span class="step-number">2</span><div><h3>Connect a Codex worker</h3><p>Linux with systemd or macOS · use your project account</p></div></div><div class="command-block"><code id="worker-command">curl -fsSL https://raw.githubusercontent.com/arizzi74/Twarm/main/scripts/install.sh | sh -s -- setup worker</code><button type="button" class="copy-button" data-copy="worker-command" aria-label="Copy worker install command">Copy <span aria-hidden="true">⧉</span></button></div><p class="install-hint">Enter a worker name and a one-use enrollment URL from the admin console. Setup installs Codex if needed and guides account sign-in.</p></article>

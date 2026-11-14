@@ -1,7 +1,7 @@
 {
-  "captured_at": "2026-11-14T11:57:50.752Z",
+  "captured_at": "2026-11-14T12:13:50.594Z",
   "product": "Twarm",
-  "release": "0.7.32",
+  "release": "0.7.33",
   "demo_data": true,
   "description": "Actual embedded Twarm WebUI rendered in Chromium with fictional API and WebSocket fixtures. No live server or private session data.",
   "source_sha256": {

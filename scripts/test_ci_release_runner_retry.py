@@ -24,7 +24,7 @@ exec(compile(SHELL.split("\n", 1)[1].rsplit("\nPY\n", 1)[0], "retry-release-runn
 
 class ReleaseRunnerRetryTest(unittest.TestCase):
     def setUp(self):
-        self.repository = "arizzi74/MACT"
+        self.repository = "arizzi74/Twarm"
         self.base = "/repos/" + self.repository
         self.run_path = self.base + "/actions/runs/42"
         self.run = {

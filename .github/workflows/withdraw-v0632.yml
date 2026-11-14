@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   withdraw:
-    if: github.repository == 'arizzi74/MACT' && github.ref == 'refs/heads/main'
+    if: github.repository == 'arizzi74/Twarm' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

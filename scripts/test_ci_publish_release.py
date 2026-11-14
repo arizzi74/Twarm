@@ -29,7 +29,7 @@ class PublishReleaseTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="mact-publish-tests-")
         self.addCleanup(temporary.cleanup)
         self.dist = Path(temporary.name)
-        self.repo, self.tag, self.commit = "arizzi74/MACT", "v1.2.3", "a" * 40
+        self.repo, self.tag, self.commit = "arizzi74/Twarm", "v1.2.3", "a" * 40
         self.base = f"repos/{self.repo}"
         self.payloads = {"manager-linux-amd64": b"synthetic manager", "install.sh": b"synthetic installer"}
         self.payloads["SHA256SUMS"] = "".join(
@@ -115,7 +115,7 @@ class PublishReleaseTest(unittest.TestCase):
             if override is not None:
                 return override
         if endpoint == "graphql":
-            self.assertEqual(payload["variables"], {"owner": "arizzi74", "name": "MACT", "tag": self.tag})
+            self.assertEqual(payload["variables"], {"owner": "arizzi74", "name": "Twarm", "tag": self.tag})
             self.assertIn("release(tagName:$tag)", payload["query"])
             match = {"databaseId": self.remote["id"], "tagCommit": self.tag_commit} if self.remote else None
             return self.answer(command, data={"data": {"repository": {"nameWithOwner": self.repo, "release": match}}})

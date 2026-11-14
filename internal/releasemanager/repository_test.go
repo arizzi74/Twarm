@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -309,6 +310,8 @@ func TestRequestedWorkerCanonicalRepoMigrationWaitsForReadiness(t *testing.T) {
 		for _, ready := range []bool{false, true} {
 			t.Run(fmt.Sprintf("pending=%v/ready=%v", pending, ready), func(t *testing.T) {
 				l, _, release := updateFixture(t, "worker")
+				l.CompatibilityCommand = l.AliasCommand
+				l.AliasCommand = filepath.Join(l.Bin, "twarm")
 				release.Repo, release.Tag = RenamedRepo, "v0.7.32"
 				if err := WriteJSON(l.State, map[string]any{"schema": 1, "component": "worker", "repo": LegacyRepo, "version": release.Tag, "pending": pending}); err != nil {
 					t.Fatal(err)
@@ -337,6 +340,15 @@ func TestRequestedWorkerCanonicalRepoMigrationWaitsForReadiness(t *testing.T) {
 				wantSuccess := !pending || ready
 				if (err == nil) != wantSuccess {
 					t.Fatal("unexpected queued readiness result", err)
+				}
+				for _, alias := range []string{l.AliasCommand, l.CompatibilityCommand} {
+					if wantSuccess {
+						if link, e := os.Readlink(alias); e != nil || link != l.Manager {
+							t.Fatalf("same-version alias missing: %s %q %v", alias, link, e)
+						}
+					} else if _, e := os.Lstat(alias); !os.IsNotExist(e) {
+						t.Fatalf("failed readiness installed alias: %s %v", alias, e)
+					}
 				}
 				settings, err := SavedSettings(l)
 				if err != nil {

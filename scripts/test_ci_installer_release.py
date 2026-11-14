@@ -75,6 +75,16 @@ class InstallerReleaseScopeTest(unittest.TestCase):
             with self.subTest(arguments=arguments), self.assertRaises(POLICY.ScopeError):
                 self.validate(**{"scope": "claude-compaction", **arguments})
 
+    def test_twarm_cutover_scope_excludes_unchanged_app_and_audio_features(self):
+        changed = POLICY.TWARM_CUTOVER_ALLOWED | {f"docs/releases/{self.tag}.md"}
+        self.target(changed)
+        self.assertEqual(self.validate(scope="twarm-cutover"), changed)
+        for name in ("go.mod", "internal/admin/static/webui.js", "internal/admin/admin.go", "internal/audio/audio.go", "internal/claudeadapter/runtime.go", "internal/releaseauth/verify.go"):
+            self.setUp()
+            self.target(("scripts/install.sh", name))
+            with self.assertRaises(POLICY.ScopeError):
+                self.validate(scope="twarm-cutover")
+
     def test_twarm_scope_requires_exact_reviewed_files_and_immutable_release_boundary(self):
         changed = POLICY.TWARM_MIGRATION_ALLOWED | {f"docs/releases/{self.tag}.md"}
         self.target(changed)
@@ -263,6 +273,7 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
             "questions": ("webui_questions_only", {"webui-question-tests"}),
             "webui": ("webui_only", {"webui-tests"}),
             "worker-maintenance": ("worker_maintenance_only", {"worker-maintenance-tests"}),
+            "twarm-cutover": (("worker_maintenance_only", "twarm_migration_only", "twarm_cutover_only"), {"worker-maintenance-tests"}),
             "twarm-migration": (("worker_maintenance_only", "twarm_migration_only"), {"worker-maintenance-tests"}),
             "archive-compatibility": (("worker_maintenance_only", "archive_compatibility_only"), {"worker-maintenance-tests", "native-session-archive"}),
         }
@@ -368,6 +379,9 @@ class InstallerReleaseWorkflowTest(unittest.TestCase):
         text = (ROOT / ".github/workflows/release.yml").read_text()
         self.assertIn("\"$TWARM_MIGRATION_ONLY\" == 'true' && \"$WORKER_MAINTENANCE_ONLY\" != 'true'", text)
         self.assertIn("then scope=twarm-migration", text)
+        self.assertIn("then scope=twarm-cutover", text)
+        self.assertIn("The Twarm cutover modifier requires the guarded Twarm migration mode", text)
+        self.assertIn("needs.release-mode.outputs.twarm_cutover_only != 'true'", text)
         self.assertIn("if (( modifiers > 1 )); then", text)
         job = text.split("  worker-maintenance-tests:\n", 1)[1].split("  package:\n", 1)[0]
         for required in ("./internal/releasemanager ./internal/releaseauth ./internal/distribution", "node scripts/build-brand-assets.mjs --check", "node scripts/test-site.cjs", "node scripts/test-password-auth.cjs", "node scripts/test-webui-notifications.cjs"):

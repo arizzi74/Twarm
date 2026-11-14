@@ -15,7 +15,7 @@ class ReleaseRecoveryTest(unittest.TestCase):
         source = workflow.split("python3 - <<'PY'\n", 1)[1].split('\n          PY', 1)[0]
         self.policy = {'__name__': 'recovery_test'}
         exec(compile(textwrap.dedent(source), 'release-recovery-guard', 'exec'), self.policy)
-        self.repo, self.tag, self.run_id = 'arizzi74/MACT', 'v1.2.3', 77
+        self.repo, self.tag, self.run_id = 'arizzi74/Twarm', 'v1.2.3', 77
         self.commit, self.head = 'a' * 40, 'b' * 40
         self.branch = 'release/publish-v1.2.3-run-77'
         self.environment = {'GITHUB_REPOSITORY': self.repo, 'GITHUB_EVENT_NAME': 'create',

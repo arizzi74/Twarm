@@ -45,8 +45,8 @@ const server = http.createServer((request, response) => {
       assert.match(await page.locator('.hero-description').textContent(), /^Boost your development workflow with a single control hub for coding agents\./);
       assert.match(await page.locator('.hero-description').textContent(), /manage multiple coding agent installations across servers/i);
       assert.match(await page.locator('.hero-description').textContent(), /Codex and Claude Code are supported today through dedicated workers/);
-      assert.equal(await page.locator('.release-pill').getAttribute('href'), 'https://github.com/arizzi74/Twarm/releases/tag/v0.7.32');
-      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /Twarm 0\.7\.32.*Codex and Claude Code/);
+      assert.equal(await page.locator('.release-pill').getAttribute('href'), 'https://github.com/arizzi74/Twarm/releases/tag/v0.7.33');
+      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /Twarm 0\.7\.33.*Codex and Claude Code/);
       assert.match(await page.locator('#agents').textContent(), /Claude follow-ups are queued, not steered into the active turn/);
       assert.match(await page.locator('#agents').textContent(), /terminal attachment and project archive\/restore remain Codex-only/);
       assert.equal(await page.getByRole('link', { name: 'Twarm · Coding agent control hub home', exact: true }).count(), 1);
@@ -104,7 +104,7 @@ const server = http.createServer((request, response) => {
     assert.deepEqual(errors, []); assert.deepEqual(failed, []); assert.deepEqual(external, []);
     const capture = JSON.parse(fs.readFileSync(path.join(site, 'assets/screenshots/capture.json'), 'utf8'));
     assert.equal(capture.demo_data, true); assert.ok(!Number.isNaN(Date.parse(capture.captured_at)));
-    assert.equal(capture.product, 'Twarm'); assert.equal(capture.release, '0.7.32');
+    assert.equal(capture.product, 'Twarm'); assert.equal(capture.release, '0.7.33');
     console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, and zero external requests.');
     console.log('Page previews: ' + screenshots);
   } finally { await browser.close(); }

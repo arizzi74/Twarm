@@ -1,6 +1,6 @@
 #!/bin/sh
 # This HTTPS-fetched script is the initial trust root. Before execution, verify
-# the known v0.7.10 native manager against a checksum pinned in this script.
+# the known v0.7.32 native manager against a checksum pinned in this script.
 set -eu
 
 # The native manager selects gateway setup under sudo, worker setup otherwise.
@@ -36,7 +36,7 @@ select_repo() {
   repository=$1
 }
 
-repository=arizzi74/MACT
+repository=arizzi74/Twarm
 requested_repo=
 release_tag=
 expect=
@@ -63,16 +63,16 @@ fi
 case "$(uname -s)" in Linux) platform=linux ;; Darwin) platform=darwin ;; *) fail 'unsupported operating system' ;; esac
 case "$(uname -m)" in x86_64|amd64) architecture=amd64 ;; aarch64|arm64) architecture=arm64 ;; *) fail 'unsupported CPU architecture' ;; esac
 asset="codex-telegramgw-$platform-$architecture"
-# These pins come from the authenticated canonical v0.7.10 SHA256SUMS manifest
-# (SHA256 5c24e4581f704bceb1f4c54e1a0efb9af11badc72714d10a15b676138071b8f3).
+# These pins come from the authenticated MACT-signed v0.7.32 SHA256SUMS manifest
+# (SHA256 4957ea536a64fe92b8bd67cbcdd939a4b1f0452f7708955c0ad58f06845c82fd).
 # The bootstrap version is independent of the release/repository being installed.
 # This manager verifies signed provenance and checksums for the target release.
-bootstrap_version=v0.7.10
+bootstrap_version=v0.7.32
 case "$platform-$architecture" in
-  linux-amd64) expected=14679733a214051917367b297c2b1053f8a9aff2aca3ae1ac15382b967887c96 ;;
-  linux-arm64) expected=50644f55ac39030140e2de84387f71ba397f7c8285037e3e33d6756a00a958cb ;;
-  darwin-amd64) expected=0ef44ca5d470166944ef71d17657a51800a3d7defeaf0351012c24110992abf1 ;;
-  darwin-arm64) expected=af5085990b286575c98ac839112a2b6d6c232d8b8cd097812bd5eef52dc4d7cc ;;
+  linux-amd64) expected=59107b15918bb155ed4bae2a10c9e5d6890a63d73d2ade7b1ef58d53fd7868ae ;;
+  linux-arm64) expected=edf09680c6d231b54455f43fd0ecb6bb3caf47ac9278c01d7a07c501921beb4c ;;
+  darwin-amd64) expected=651298e4197a147427b42ed82dda0299dcc994efbf9a7979462004bbb5465149 ;;
+  darwin-arm64) expected=e277bda2339f04886932307fe9c79d626673bdce2857f30091a421ac3ac64a50 ;;
 esac
 printf 'Preparing the %s installer for %s/%s...\n' "$1" "$platform" "$architecture"
 download() {
@@ -87,6 +87,7 @@ release_url=$(download --max-filesize 1048576 --output /dev/null --write-out '%{
 # pages too: historical release assets acquire the renamed repository's URLs.
 case "$repository:$release_url" in
   arizzi74/Codex-Telegram-Gateway:https://github.com/arizzi74/MACT/releases/tag/*) repository=arizzi74/MACT ;;
+  arizzi74/Codex-Telegram-Gateway:https://github.com/arizzi74/Twarm/releases/tag/*|arizzi74/MACT:https://github.com/arizzi74/Twarm/releases/tag/*) repository=arizzi74/Twarm ;;
 esac
 case "$release_url" in
   "https://github.com/$repository/releases/tag/"*) resolved_tag=${release_url##*/} ;;
@@ -96,12 +97,13 @@ stable_tag "$resolved_tag" || fail 'GitHub did not return a stable release tag'
 [ "$release_url" = "https://github.com/$repository/releases/tag/$resolved_tag" ] || fail 'GitHub returned an unexpected release URL'
 [ -z "$release_tag" ] || [ "$release_tag" = "$resolved_tag" ] || fail 'GitHub returned the wrong release version'
 release_tag=$resolved_tag
-if [ "$repository" = arizzi74/MACT ]; then
-  case "$release_tag" in
-    v0.0.*|v0.1.*|v0.2.*|v0.3.*|v0.4.*|v0.5.*|v0.6.[0-9]|v0.6.1[0-9]|v0.6.20)
-      fail 'releases before v0.6.21 contain an updater that cannot follow the MACT repository rename; install v0.6.21 or newer' ;;
-  esac
-fi
+case "$repository" in
+  arizzi74/Twarm|arizzi74/MACT|arizzi74/Codex-Telegram-Gateway)
+    case "$release_tag" in
+      v0.[0-6].*|v0.7.[0-9]|v0.7.[12][0-9]|v0.7.3[01])
+        fail 'releases before v0.7.32 cannot follow the Twarm repository rename; install v0.7.32 or newer' ;;
+    esac ;;
+esac
 
 temporary=
 fallback=
@@ -112,7 +114,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 temporary=$(mktemp -d "${TMPDIR:-/tmp}/codex-telegramgw-install.XXXXXXXX") || fail 'could not create a private temporary directory; set TMPDIR to a writable directory and retry'
-base="https://github.com/arizzi74/MACT/releases/download/$bootstrap_version"
+base="https://github.com/arizzi74/Twarm/releases/download/$bootstrap_version"
 printf 'Downloading and verifying installer %s for release %s...\n' "$bootstrap_version" "$release_tag"
 download --max-filesize 67108864 --output "$temporary/$asset" "$base/$asset" || fail 'could not download the release manager'
 printf '%s  %s\n' "$expected" "$asset" > "$temporary/manager.sha256"

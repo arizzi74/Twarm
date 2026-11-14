@@ -850,15 +850,17 @@ or missing verifier causes it to stop. See the official
 
 Run the following in your project account's terminal. It authenticates the
 native manager before giving it executable permissions; no downloaded shell
-script runs. Change the explicit stable version when selecting another release.
+script runs. This pins the MACT-signed v0.7.32 bridge, now downloaded from Twarm.
+For another release, verify and set its exact signing repository and stable tag.
 Keep this terminal open to use the verified manager.
 
 ```sh
-export MACT_INSTALLER_DIR
-MACT_INSTALLER_DIR=$(
+export TWARM_INSTALLER_DIR
+TWARM_INSTALLER_DIR=$(
   set -eu
-  version=v0.7.10
-  repository=arizzi74/MACT
+  version=v0.7.32
+  repository=arizzi74/Twarm
+  signing_repository=arizzi74/MACT
   case "$(uname -s)" in Linux) platform=linux ;; Darwin) platform=darwin ;; *) exit 1 ;; esac
   case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) exit 1 ;; esac
   asset="codex-telegramgw-$platform-$arch"
@@ -874,8 +876,8 @@ MACT_INSTALLER_DIR=$(
   download --max-filesize 4194304 --output "$temporary/SHA256SUMS.sigstore.json" "$base/SHA256SUMS.sigstore.json"
   gh attestation verify "$temporary/SHA256SUMS" \
     --bundle "$temporary/SHA256SUMS.sigstore.json" \
-    --repo "$repository" \
-    --cert-identity "https://github.com/$repository/.github/workflows/release.yml@refs/tags/$version" \
+    --repo "$signing_repository" \
+    --cert-identity "https://github.com/$signing_repository/.github/workflows/release.yml@refs/tags/$version" \
     --cert-oidc-issuer https://token.actions.githubusercontent.com \
     --source-ref "refs/tags/$version" \
     --predicate-type https://slsa.dev/provenance/v1 >/dev/null
@@ -897,14 +899,14 @@ MACT_INSTALLER_DIR=$(
 After successful verification, use the private executable for your chosen role:
 
 ```sh
-sudo "$MACT_INSTALLER_DIR/install" setup gateway
-"$MACT_INSTALLER_DIR/install" setup worker
-"$MACT_INSTALLER_DIR/install" setup claude-worker
+sudo "$TWARM_INSTALLER_DIR/install" setup gateway
+"$TWARM_INSTALLER_DIR/install" setup worker
+"$TWARM_INSTALLER_DIR/install" setup claude-worker
 ```
 
 Run only the command for the service you need. Other manager commands accept the
 same executable path. When finished, remove it with
-`rm -rf -- "$MACT_INSTALLER_DIR"`.
+`rm -rf -- "$TWARM_INSTALLER_DIR"`.
 
 The trusted CLI authenticates the manifest's signature, certificate and
 transparency evidence, and requires the exact repository, release workflow,
@@ -913,9 +915,8 @@ checksum become an authenticity check. An unsigned, substituted or truncated
 asset fails before execution, including gateway setup with sudo.
 
 This path uses the independently trusted GitHub CLI and its trust roots instead
-of executing the HTTPS-delivered shell bootstrap. The exact identity policy
-rejects historical attestations under a different repository name; select a
-release signed under `arizzi74/MACT`. The native updater's explicitly authorized
+of executing the HTTPS-delivered shell bootstrap. The exact identity policy requires the original MACT signer for this bridge.
+Later Twarm-signed releases use `signing_repository=arizzi74/Twarm`. The native updater's explicitly authorized
 historical migration policy is unchanged.
 
 The manager verifies both the platform archive and its contained binary.

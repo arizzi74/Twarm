@@ -215,6 +215,13 @@ ARCHIVE_COMPATIBILITY_ALLOWED = frozenset({
 
 
 TWARM_MIGRATION_ALLOWED = frozenset({
+    'internal/releasemanager/worker_update_request.go',
+    '.github/workflows/installer-release-launch.yml',
+    '.github/workflows/installer-release-publish.yml',
+    '.github/workflows/withdraw-v0632.yml',
+    'scripts/test_ci_release_recovery.py',
+    'scripts/test_ci_release_runner_retry.py',
+    'scripts/test_ci_publish_release.py',
     '.gitattributes',
     '.github/workflows/release.yml',
     'README.md',
@@ -303,6 +310,31 @@ TWARM_MIGRATION_ALLOWED = frozenset({
 })
 
 
+TWARM_CUTOVER_ALLOWED = frozenset({
+    '.github/workflows/installer-release-launch.yml',
+    '.github/workflows/installer-release-publish.yml',
+    '.github/workflows/release.yml',
+    '.github/workflows/withdraw-v0632.yml',
+    'docs/installation.md',
+    'docs/twarm-migration.md',
+    'internal/distribution/bootstrap_test.go',
+    'internal/releasemanager/repository_test.go',
+    'internal/releasemanager/worker_update_request.go',
+    'scripts/capture-site-screenshots.cjs',
+    'scripts/check-installer-release.py',
+    'scripts/install.sh',
+    'scripts/test-site.cjs',
+    'scripts/test_ci_installer_release.py',
+    'scripts/test_ci_publish_release.py',
+    'scripts/test_ci_release_recovery.py',
+    'scripts/test_ci_release_runner_retry.py',
+    'site/assets/screenshots/capture.json',
+    'site/assets/screenshots/webui-desktop.png',
+    'site/assets/screenshots/webui-mobile.png',
+    'site/index.html',
+})
+
+
 class ScopeError(Exception):
     pass
 
@@ -312,7 +344,7 @@ def git(*arguments, root=ROOT):
 
 
 def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
-    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration"):
+    if scope not in ("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration", "twarm-cutover"):
         raise ScopeError("Unknown focused release scope")
     target = STABLE.fullmatch(tag)
     previous = STABLE.fullmatch(baseline)
@@ -331,7 +363,7 @@ def validate(tag, baseline, commit, latest, root=ROOT, scope="installer"):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     names = git("diff", "--name-only", "--no-renames", "-z", base, commit, "--", root=root).split(b"\0")
     changed = {name.decode("utf-8", errors="strict") for name in names if name}
-    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED, "archive-compatibility": ARCHIVE_COMPATIBILITY_ALLOWED, "twarm-migration": TWARM_MIGRATION_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
+    allowed = {"installer": ALLOWED, "claude-compaction": COMPACTION_ALLOWED, "claude-usage": USAGE_ALLOWED, "claude-skills": SKILLS_ALLOWED, "claude-skills-ui": SKILLS_UI_ALLOWED, "webui-questions": QUESTIONS_ALLOWED, "webui": WEBUI_ALLOWED, "worker-maintenance": WORKER_MAINTENANCE_ALLOWED, "claude-mcp": CLAUDE_MCP_ALLOWED, "archive-compatibility": ARCHIVE_COMPATIBILITY_ALLOWED, "twarm-migration": TWARM_MIGRATION_ALLOWED, "twarm-cutover": TWARM_CUTOVER_ALLOWED}[scope] | {f"docs/releases/{tag}.md"}
     if not changed or changed - allowed:
         raise ScopeError("Focused release contains an empty or out-of-scope change set")
     # Even an allowed path must remain an ordinary file, never executable
@@ -359,7 +391,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("repo", "tag", "baseline", "commit"):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration"), default="installer")
+    parser.add_argument("--scope", choices=("installer", "claude-compaction", "claude-usage", "claude-skills", "claude-skills-ui", "webui-questions", "webui", "worker-maintenance", "claude-mcp", "archive-compatibility", "twarm-migration", "twarm-cutover"), default="installer")
     args = parser.parse_args()
     try:
         changed = validate(args.tag, args.baseline, args.commit, latest_release(args.repo), scope=args.scope)
