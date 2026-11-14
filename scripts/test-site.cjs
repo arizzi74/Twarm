@@ -38,10 +38,11 @@ const server = http.createServer((request, response) => {
       await page.setViewportSize({ width, height: width <= 390 ? 844 : 1000 });
       await page.goto(origin + prefix);
       await page.locator('h1').waitFor();
-      assert.equal(await page.title(), 'Twarm — Coding agent control hub');
+      assert.equal(await page.title(), 'Twarm — Coding agent swarm control hub');
+      assert.equal(await page.locator('meta[property="og:title"]').getAttribute('content'), 'Twarm — Coding agent swarm control hub');
       assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), 'https://arizzi74.github.io/Twarm/');
       assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), 'https://arizzi74.github.io/Twarm/assets/screenshots/webui-desktop.png');
-      assert.match(await page.locator('h1').innerText(), /Your coding agent\s+control hub/);
+      assert.match(await page.locator('h1').innerText(), /Coding agent\s+swarm control hub/);
       assert.match(await page.locator('.hero-description').textContent(), /^Boost your development workflow with a single control hub for coding agents\./);
       assert.match(await page.locator('.hero-description').textContent(), /manage multiple coding agent installations across servers/i);
       assert.match(await page.locator('.hero-description').textContent(), /Codex and Claude Code are supported today through dedicated workers/);
@@ -49,7 +50,7 @@ const server = http.createServer((request, response) => {
       assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /Twarm 0\.7\.33.*Codex and Claude Code/);
       assert.match(await page.locator('#agents').textContent(), /Claude follow-ups are queued, not steered into the active turn/);
       assert.match(await page.locator('#agents').textContent(), /terminal attachment and project archive\/restore remain Codex-only/);
-      assert.equal(await page.getByRole('link', { name: 'Twarm · Coding agent control hub home', exact: true }).count(), 1);
+      assert.equal(await page.getByRole('link', { name: 'Twarm · Coding agent swarm control hub home', exact: true }).count(), 1);
       assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('src'), 'assets/twarm_logo+name.svg');
       assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('alt'), 'Twarm');
       assert.equal(await page.locator('.gateway-node > strong').textContent(), 'Twarm Gateway');
@@ -101,11 +102,111 @@ const server = http.createServer((request, response) => {
     assert.equal(await page.evaluate(() => document.activeElement.className), 'skip-link');
     await page.keyboard.press('Enter');
     assert.equal(new URL(page.url()).hash, '#main');
+    // Exercise the actual Canvas pixels and geometry, rather than only checking CSS.
+    const motionPage = await context.newPage();
+    motionPage.on('pageerror', error => errors.push(error.message));
+    await motionPage.route('**/*', route => {
+      if (new URL(route.request().url()).origin !== origin) { external.push(route.request().url()); return route.abort('blockedbyclient'); }
+      return route.continue();
+    });
+    await motionPage.addInitScript(() => {
+      window.swarmTestFrames = 0;
+      window.swarmTestHidden = false;
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => window.swarmTestHidden });
+      const requestFrame = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = callback => { window.swarmTestFrames++; return requestFrame(callback); };
+    });
+    await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
+    await motionPage.setViewportSize({ width: 1100, height: 760 });
+    await motionPage.goto(origin + prefix);
+    await motionPage.waitForFunction(() => document.querySelector('#swarm-background').width === innerWidth);
+    const pixels = () => motionPage.evaluate(() => {
+      const canvas = document.querySelector('#swarm-background'), ctx = canvas.getContext('2d');
+      const { width, height } = canvas;
+      const data = ctx.getImageData(0, 0, width, height).data;
+      let green = 0, peak = 0, alphaHash = 2166136261, cornerHash = 2166136261;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 30 && data[i + 1] > data[i] + 8 && data[i + 1] > data[i + 2] + 15) green++;
+        if (data[i + 3] > 30) peak = Math.max(peak, data[i + 1]);
+        if (i % 16 === 0) alphaHash = Math.imul(alphaHash ^ data[i + 3], 16777619);
+        if ((i / 4) % width < 80 && Math.floor(i / 4 / width) < 80) cornerHash = Math.imul(cornerHash ^ data[i] ^ data[i + 3], 16777619);
+      }
+      return { png: canvas.toDataURL(), green, peak, alphaHash, cornerHash, frames: window.swarmTestFrames };
+    });
+    const settle = () => motionPage.waitForFunction(() => {
+      const now = performance.now();
+      if (window.swarmTestObservedFrames !== window.swarmTestFrames) {
+        window.swarmTestObservedFrames = window.swarmTestFrames;
+        window.swarmTestLastChange = now;
+      }
+      return now - (window.swarmTestLastChange || now) > 150;
+    }, null, { polling: 80, timeout: 5000 });
+    await motionPage.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await settle();
+    const idle = await pixels();
+    assert.equal(idle.green, 0, 'Resting arrows are gray');
+    assert.equal(await motionPage.locator('#swarm-background').getAttribute('aria-hidden'), 'true');
+    assert.equal(await motionPage.locator('#swarm-background').evaluate(canvas => getComputedStyle(canvas).pointerEvents), 'none');
+    await motionPage.screenshot({ path: path.join(screenshots, 'swarm-idle.png') });
+    await motionPage.mouse.move(550, 280);
+    await motionPage.waitForFunction(() => window.swarmTestFrames > 10, null, { polling: 40 });
+    await settle();
+    const active = await pixels();
+    assert.ok(active.green > 20, 'Nearby arrows fade toward lime under the real mouse');
+    assert.ok(active.peak < 170, 'The glow is subdued compared with the logo green channel (245)');
+    assert.notEqual(active.alphaHash, idle.alphaHash, 'The triangle geometry rotates, not just its color');
+    assert.equal(active.cornerHash, idle.cornerHash, 'Distant arrows are unaffected by the mouse');
+    await motionPage.screenshot({ path: path.join(screenshots, 'swarm-active.png') });
+    await motionPage.mouse.move(-10, -10);
+    await settle();
+    assert.equal((await pixels()).png, idle.png, 'The field settles back to exactly its resting appearance');
+    const stopped = await pixels();
+    await motionPage.waitForTimeout(180);
+    assert.equal((await pixels()).frames, stopped.frames, 'No animation frames are requested while idle');
+    await motionPage.mouse.move(500, 250);
+    await motionPage.emulateMedia({ reducedMotion: 'reduce' });
+    await motionPage.mouse.move(650, 320);
+    await settle();
+    assert.equal((await pixels()).png, idle.png, 'Reduced motion retains a static gray field');
+    await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
+    await motionPage.mouse.move(520, 270);
+    await motionPage.evaluate(() => { window.swarmTestHidden = true; document.dispatchEvent(new Event('visibilitychange')); });
+    const hiddenFrames = (await pixels()).frames;
+    await motionPage.waitForTimeout(180);
+    assert.equal((await pixels()).frames, hiddenFrames, 'A hidden tab stops requesting frames');
+    await motionPage.evaluate(() => { window.swarmTestHidden = false; document.dispatchEvent(new Event('visibilitychange')); });
+    assert.equal((await pixels()).png, idle.png, 'A restored tab starts from the quiet background');
+    await motionPage.evaluate(() => Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 4 }));
+    await motionPage.setViewportSize({ width: 1440, height: 1000 });
+    await motionPage.waitForFunction(() => document.querySelector('#swarm-background').getBoundingClientRect().width === innerWidth);
+    const highDensity = await motionPage.locator('#swarm-background').evaluate(canvas => ({ pixels: canvas.width * canvas.height, width: canvas.getBoundingClientRect().width, height: canvas.getBoundingClientRect().height }));
+    assert.ok(highDensity.pixels <= 4010000, 'High-density displays have a bounded Canvas buffer');
+    assert.equal(highDensity.width, 1440); assert.equal(highDensity.height, 1000);
+    await motionPage.close();
+    const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'no-preference' });
+    try {
+      const touchPage = await touchContext.newPage();
+      touchPage.on('pageerror', error => errors.push(error.message));
+      await touchPage.route('**/*', route => {
+        if (new URL(route.request().url()).origin !== origin) { external.push(route.request().url()); return route.abort('blockedbyclient'); }
+        return route.continue();
+      });
+      await touchPage.goto(origin + prefix);
+      await touchPage.waitForFunction(() => document.querySelector('#swarm-background').width > 0);
+      const beforeTouch = await touchPage.locator('#swarm-background').evaluate(canvas => canvas.toDataURL());
+      await touchPage.touchscreen.tap(5, 5);
+      await touchPage.evaluate(() => window.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'touch', clientX: 190, clientY: 250 })));
+      await touchPage.waitForTimeout(180);
+      assert.equal(await touchPage.locator('#swarm-background').evaluate(canvas => canvas.toDataURL()), beforeTouch, 'Touch interaction does not animate the background');
+      await touchPage.evaluate(() => scrollTo(0, 500));
+      assert.equal(await touchPage.locator('#swarm-background').evaluate(canvas => canvas.getBoundingClientRect().top), 0, 'The decoration stays behind the viewport during scroll');
+    } finally { await touchContext.close(); }
+
     assert.deepEqual(errors, []); assert.deepEqual(failed, []); assert.deepEqual(external, []);
     const capture = JSON.parse(fs.readFileSync(path.join(site, 'assets/screenshots/capture.json'), 'utf8'));
     assert.equal(capture.demo_data, true); assert.ok(!Number.isNaN(Date.parse(capture.captured_at)));
     assert.equal(capture.product, 'Twarm'); assert.equal(capture.release, '0.7.33');
-    console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, and zero external requests.');
+    console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, mouse-driven swarm rotation/fading, reduced motion, touch/hidden/idle behavior, and zero external requests.');
     console.log('Page previews: ' + screenshots);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => server.close());

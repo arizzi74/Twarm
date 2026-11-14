@@ -5,29 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0D0F12">
-  <meta name="description" content="Twarm 0.7.33 brings Codex and Claude Code into one control hub. Manage dedicated workers across servers, switch sessions from the web or Telegram, and follow reported usage.">
-  <meta property="og:title" content="Twarm — Coding agent control hub">
+  <meta name="description" content="Twarm 0.7.33 is a coding agent swarm control hub for Codex and Claude Code. Manage dedicated workers across servers, switch sessions from the web or Telegram, and follow reported usage.">
+  <meta property="og:title" content="Twarm — Coding agent swarm control hub">
   <meta property="og:description" content="Codex and Claude Code, supported today through dedicated workers. One web interface or Telegram bot for your coding agent sessions across servers. Available in Twarm 0.7.33.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://arizzi74.github.io/Twarm/">
   <meta property="og:image" content="https://arizzi74.github.io/Twarm/assets/screenshots/webui-desktop.png">
   <link rel="canonical" href="https://arizzi74.github.io/Twarm/">
-  <title>Twarm — Coding agent control hub</title>
+  <title>Twarm — Coding agent swarm control hub</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/site.css">
   <script defer src="assets/site.js"></script>
+  <script defer src="assets/swarm-background.js"></script>
 </head>
 <body>
+  <canvas id="swarm-background" aria-hidden="true"></canvas>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header wrap">
-    <a class="brand" href="#" aria-label="Twarm · Coding agent control hub home"><img class="brand-wordmark" src="assets/twarm_logo+name.svg" width="230" height="64" alt="Twarm"></a>
+    <a class="brand" href="#" aria-label="Twarm · Coding agent swarm control hub home"><img class="brand-wordmark" src="assets/twarm_logo+name.svg" width="230" height="64" alt="Twarm"></a>
     <nav aria-label="Main navigation"><a href="#experience">Web interface</a><a href="#how-it-works">Architecture</a><a href="https://github.com/arizzi74/Twarm/tree/main/docs">Docs <span aria-hidden="true">↗</span></a><a class="nav-github" href="https://github.com/arizzi74/Twarm">GitHub <span aria-hidden="true">↗</span></a></nav>
   </header>
   <main id="main">
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
         <a class="release-pill" href="https://github.com/arizzi74/Twarm/releases/tag/v0.7.33"><span class="status-dot" aria-hidden="true"></span>v0.7.33<span class="pill-divider" aria-hidden="true">/</span>Codex + Claude Code<span aria-hidden="true">↗</span></a>
-        <h1 id="hero-title">Your coding agent<br><span>control hub.</span></h1>
+        <h1 id="hero-title">Coding agent<br><span>swarm control hub</span></h1>
         <p class="hero-description">Boost your development workflow with a single control hub for coding agents. Codex and Claude Code are supported today through dedicated workers. Switch between sessions, follow tool activity and reported usage, and manage multiple coding agent installations across servers from one web interface or Telegram bot.</p>
         <div class="hero-actions"><a class="button button-primary" href="#install">Installation <span aria-hidden="true">→</span></a><a class="button button-secondary" href="https://github.com/arizzi74/Twarm">View on GitHub <span aria-hidden="true">↗</span></a></div>
         <p class="hero-note"><span>Go binaries</span><span>Embedded SQLite</span><span>Linux + macOS workers</span></p>
@@ -86,6 +88,6 @@
 
     <section class="closing wrap" aria-labelledby="closing-title"><img class="brand-icon" src="assets/twarm_logo.svg" width="64" height="64" alt=""><div><h2 id="closing-title">Project resources</h2><p>Source code, documentation, release downloads, and issue tracking are available on GitHub.</p></div><a class="button button-primary" href="https://github.com/arizzi74/Twarm">View repository <span aria-hidden="true">↗</span></a></section>
   </main>
-  <footer class="site-footer wrap"><a class="brand footer-brand" href="#"><img class="brand-wordmark" src="assets/twarm_logo+name.svg" width="230" height="64" alt="Twarm"></a><p>Coding agent control hub · Your coding agent control hub.</p><nav aria-label="Project links"><a href="https://github.com/arizzi74/Twarm/tree/main/docs">Docs</a><a href="https://github.com/arizzi74/Twarm/releases">Releases</a><a href="https://github.com/arizzi74/Twarm/issues">Issues</a><a href="https://github.com/arizzi74/Twarm/blob/main/LICENSE">License</a></nav></footer>
+  <footer class="site-footer wrap"><a class="brand footer-brand" href="#"><img class="brand-wordmark" src="assets/twarm_logo+name.svg" width="230" height="64" alt="Twarm"></a><p>Coding agent swarm control hub.</p><nav aria-label="Project links"><a href="https://github.com/arizzi74/Twarm/tree/main/docs">Docs</a><a href="https://github.com/arizzi74/Twarm/releases">Releases</a><a href="https://github.com/arizzi74/Twarm/issues">Issues</a><a href="https://github.com/arizzi74/Twarm/blob/main/LICENSE">License</a></nav></footer>
 </body>
 </html>
