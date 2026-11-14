@@ -92,7 +92,7 @@
     canvas.width = Math.max(1, Math.round(width * scale));
     canvas.height = Math.max(1, Math.round(height * scale));
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    const spacing = Math.max(36, Math.sqrt(width * height / 1600));
+    const spacing = Math.max(18, Math.sqrt(width * height / 6400));
     arrows = [];
     for (let row = 0; row < Math.ceil(height / spacing); row++) {
       for (let column = 0; column < Math.ceil(width / spacing); column++) {
