@@ -218,14 +218,16 @@ type verificationFixture struct {
 }
 
 type verificationEvent struct {
-	Type, Method string
-	Pass, PID    int
-	Params       json.RawMessage
-	Project      string
-	Home         string
-	CodexHome    string
-	SQLiteHome   string
-	Credentials  []string
+	Type, Method  string
+	Pass, PID     int
+	Params        json.RawMessage
+	Project       string
+	Home          string
+	CodexHome     string
+	SQLiteHome    string
+	OpenAIBaseURL string
+	Provider      string
+	Credentials   []string
 }
 
 func verificationFixtureBinary(t *testing.T, m Manifest, fault verificationFault, checkRestore bool) (string, string) {
@@ -329,7 +331,7 @@ func assertVerificationPasses(t *testing.T, events []verificationEvent, m Manife
 			}
 			starts[event.Pass] = event
 			root := filepath.Dir(event.Project)
-			if event.Home != filepath.Join(root, "user-home") || event.CodexHome != filepath.Join(root, "codex") || event.SQLiteHome != event.CodexHome || len(event.Credentials) != 0 {
+			if event.Home != filepath.Join(root, "user-home") || event.CodexHome != filepath.Join(root, "codex") || event.SQLiteHome != event.CodexHome || event.OpenAIBaseURL != "http://127.0.0.1:1" || len(event.Credentials) != 0 {
 				t.Fatalf("verification process was not isolated: %#v", event)
 			}
 		} else {
@@ -364,7 +366,7 @@ func assertVerificationPasses(t *testing.T, events []verificationEvent, m Manife
 
 func assertIsolatedVersionProbe(t *testing.T, event verificationEvent) {
 	t.Helper()
-	if event.Home != filepath.Join(event.Project, "user-home") || event.CodexHome != filepath.Join(event.Project, "codex") || event.SQLiteHome != event.CodexHome || len(event.Credentials) != 0 {
+	if event.Home != filepath.Join(event.Project, "user-home") || event.CodexHome != filepath.Join(event.Project, "codex") || event.SQLiteHome != event.CodexHome || event.OpenAIBaseURL != "http://127.0.0.1:1" || len(event.Credentials) != 0 {
 		t.Fatalf("version probe was not isolated: %#v", event)
 	}
 }
@@ -432,7 +434,20 @@ func runVerificationFixture(configPath string, args []string) error {
 		fmt.Println("codex-cli " + config.Manifest.CodexVersion)
 		return nil
 	}
-	if !reflect.DeepEqual(args, []string{"app-server", "--listen", "stdio://", "-c", "features.plugins=false"}) {
+	expectedArgs := []string{"app-server", "--listen", "stdio://", "-c", "features.plugins=false"}
+	if len(args) > len(expectedArgs) {
+		contents, err := os.ReadFile(filepath.Join(os.Getenv("CODEX_HOME"), "config.toml"))
+		if err != nil {
+			return err
+		}
+		first := strings.TrimPrefix(strings.SplitN(string(contents), "\n", 2)[0], "model_provider = ")
+		var provider string
+		if err := json.Unmarshal([]byte(first), &provider); err != nil {
+			return fmt.Errorf("missing preserved provider in isolated configuration")
+		}
+		expectedArgs = append(expectedArgs, verificationProviderOverrides(provider)...)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
 		return fmt.Errorf("unexpected app-server arguments: %v", args)
 	}
 	pass := 1
@@ -473,8 +488,18 @@ func runVerificationFixture(configPath string, args []string) error {
 			return fmt.Errorf("restored project missing: %v", err)
 		}
 		content, err := os.ReadFile(filepath.Join(start.CodexHome, "config.toml"))
-		if err != nil || !strings.Contains(string(content), "base_url = \"http://127.0.0.1:1\"") || !strings.Contains(string(content), "requires_openai_auth = false") {
+		if err != nil || !strings.Contains(string(content), "base_url = \"http://127.0.0.1:1\"") {
 			return fmt.Errorf("offline verification configuration missing: %v", err)
+		}
+		if !strings.Contains(string(content), "cli_auth_credentials_store = \"file\"") {
+			return fmt.Errorf("verification must use its private credential file, never an OS keyring")
+		}
+		if start.Provider == "openai" {
+			if strings.Contains(string(content), "[model_providers.") {
+				return fmt.Errorf("built-in OpenAI provider was redefined")
+			}
+		} else if !strings.Contains(string(content), "requires_openai_auth = false") {
+			return fmt.Errorf("custom provider is not credential-free")
 		}
 		if _, err := os.Stat(filepath.Join(start.CodexHome, "auth.json")); !os.IsNotExist(err) {
 			return fmt.Errorf("unexpected authentication file: %v", err)
@@ -513,7 +538,7 @@ func runVerificationFixture(configPath string, args []string) error {
 				failure = "cannot resume unloaded multi-agent v2 sub-agent through parent; resume parent first or thread/read"
 			} else if resumed {
 				failure = "parent resumed more than once"
-			} else if params["cwd"] != project || params["excludeTurns"] != true || params["modelProvider"] != "archive_verify" || params["model"] != "archive-proof" {
+			} else if params["cwd"] != project || params["excludeTurns"] != true || params["modelProvider"] != nil || params["model"] != "archive-proof" {
 				failure = "invalid isolated parent resume parameters"
 			} else {
 				resumed, loaded[id] = true, true
@@ -590,7 +615,13 @@ func verificationProcessEnvironment(kind string) (verificationEvent, error) {
 	if err != nil {
 		return verificationEvent{}, err
 	}
-	event := verificationEvent{Type: kind, PID: os.Getpid(), Project: project, Home: os.Getenv("HOME"), CodexHome: os.Getenv("CODEX_HOME"), SQLiteHome: os.Getenv("CODEX_SQLITE_HOME")}
+	event := verificationEvent{Type: kind, PID: os.Getpid(), Project: project, Home: os.Getenv("HOME"), CodexHome: os.Getenv("CODEX_HOME"), SQLiteHome: os.Getenv("CODEX_SQLITE_HOME"), OpenAIBaseURL: os.Getenv("OPENAI_BASE_URL")}
+	if kind == "start" {
+		if contents, err := os.ReadFile(filepath.Join(event.CodexHome, "config.toml")); err == nil {
+			line := strings.TrimPrefix(strings.SplitN(string(contents), "\n", 2)[0], "model_provider = ")
+			_ = json.Unmarshal([]byte(line), &event.Provider)
+		}
+	}
 	for _, key := range []string{"OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_AUTH_TOKEN", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"} {
 		if os.Getenv(key) != "" {
 			event.Credentials = append(event.Credentials, key)

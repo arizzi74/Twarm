@@ -57,8 +57,9 @@ func probeHistoryMode(ctx context.Context, binary, root, mode string, proof *com
 			return err
 		}
 	}
-	config := "model_provider = \"archive_verify\"\nmodel = \"archive-proof\"\ncheck_for_update_on_startup = false\n[model_providers.archive_verify]\nname = \"Offline archive pre-check\"\nbase_url = \"http://127.0.0.1:1\"\nwire_api = \"responses\"\nrequires_openai_auth = false\nsupports_websockets = false\n"
-	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(config), 0600); err != nil {
+	// Use the real built-in provider identity with a credential-free offline
+	// endpoint. A custom-only fixture misses native provider-pinning rules.
+	if err := writeVerificationConfig(home, "openai"); err != nil {
 		return err
 	}
 	client, err := startVerificationServer(ctx, binary, home, project, modeRoot)
@@ -70,7 +71,7 @@ func probeHistoryMode(ctx context.Context, binary, root, mode string, proof *com
 			ID string `json:"id"`
 		} `json:"thread"`
 	}
-	err = client.call("thread/start", map[string]any{"cwd": project, "historyMode": mode, "modelProvider": "archive_verify", "model": "archive-proof"}, &started)
+	err = client.call("thread/start", map[string]any{"cwd": project, "historyMode": mode, "modelProvider": "openai", "model": "archive-proof"}, &started)
 	if err == nil {
 		err = client.call("thread/name/set", map[string]any{"threadId": started.Thread.ID, "name": "MACT archive compatibility pre-check"}, nil)
 	}
@@ -142,6 +143,9 @@ func seedPreflightHistory(ctx context.Context, filename, id, mode, version strin
 	metadata, ok := first["payload"].(map[string]any)
 	if !ok || first["type"] != "session_meta" || metadata["id"] != id || metadata["cli_version"] != version || metadata["history_mode"] != mode {
 		return fmt.Errorf("native conversation metadata changed")
+	}
+	if metadata["model_provider"] != "openai" {
+		return fmt.Errorf("native pre-check did not preserve the OpenAI provider identity")
 	}
 	records := []map[string]any{
 		first,

@@ -132,6 +132,11 @@ and an isolated compatibility check succeeds. The check creates synthetic legacy
 and paginated conversations, archives them, deletes their temporary source, and
 verifies that both user and assistant messages can be read after restoring and
 restarting Codex. It uses no account credentials or model calls.
+Verification preserves the conversation's original provider identity, including
+the built-in OpenAI provider. Its temporary configuration and process overrides
+pin verification endpoints to loopback; live account credentials and provider
+configuration are never copied into the verification process. Its credential
+store is a private file location, so verification does not use the OS keyring.
 
 Successful checks are cached in worker memory, keyed by the exact executable
 contents, runtime version and observed schemas. A worker restart or MACT upgrade

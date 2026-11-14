@@ -24,7 +24,7 @@ jobs:
           # automatic, request-scoped compatibility and worker deletion/restore.
           - version: '0.169.0'
             sha256: 9af4d751fce183faedea629437d5252dbf458eeb04130cf4f97be844621ea985
-            tests: '^TestNative(SelfContainedPreflight|WorkerArchive)'
+            tests: '^TestNative(SelfContainedPreflight|SelfContainedProviderRouting|WorkerArchive)'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5

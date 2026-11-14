@@ -37,7 +37,11 @@ func Verify(ctx context.Context, archivePath string, o VerifyOptions) (Manifest,
 	if _, err := Restore(ctx, RestoreOptions{ArchivePath: archivePath, CodexHome: home, SQLiteHome: home, Destination: project, CodexVersion: m.CodexVersion}); err != nil {
 		return Manifest{}, fmt.Errorf("isolated native import: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("model_provider = \"archive_verify\"\nmodel = \"archive-proof\"\ncheck_for_update_on_startup = false\n[model_providers.archive_verify]\nname = \"Offline archive verification\"\nbase_url = \"http://127.0.0.1:1\"\nwire_api = \"responses\"\nrequires_openai_auth = false\n"), 0600); err != nil {
+	provider, err := verificationProvider(ctx, home, m.ThreadID)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := writeVerificationConfig(home, provider); err != nil {
 		return Manifest{}, err
 	}
 	for pass := 0; pass < 2; pass++ {
@@ -45,7 +49,7 @@ func Verify(ctx context.Context, archivePath string, o VerifyOptions) (Manifest,
 			progress(o.Progress, "Verifying native resume after app-server restart")
 		}
 		verifyCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-		client, err := startVerificationServer(verifyCtx, o.CodexBinary, home, project, root)
+		client, err := startVerificationServer(verifyCtx, o.CodexBinary, home, project, root, provider)
 		if err != nil {
 			cancel()
 			return Manifest{}, err
@@ -129,7 +133,7 @@ func verifyRestoredThreads(client *verificationServer, m Manifest, project strin
 		params := map[string]any{"threadId": id, "includeTurns": false}
 		if parent {
 			method, operation = "thread/resume", "resume"
-			params = map[string]any{"threadId": id, "cwd": project, "modelProvider": "archive_verify", "model": "archive-proof", "excludeTurns": true}
+			params = map[string]any{"threadId": id, "cwd": project, "model": "archive-proof", "excludeTurns": true}
 		}
 		var response struct {
 			Thread struct {
@@ -192,11 +196,20 @@ type verificationServer struct {
 	next    int
 }
 
-func startVerificationServer(ctx context.Context, binary, home, project, root string) (*verificationServer, error) {
+func startVerificationServer(ctx context.Context, binary, home, project, root string, providers ...string) (*verificationServer, error) {
 	if binary == "" {
 		binary = "codex"
 	}
-	cmd := exec.CommandContext(ctx, binary, "app-server", "--listen", "stdio://", "-c", "features.plugins=false")
+	args := []string{"app-server", "--listen", "stdio://", "-c", "features.plugins=false"}
+	if len(providers) > 0 {
+		if len(providers) != 1 || !validVerificationProvider(providers[0]) {
+			return nil, fmt.Errorf("%w: invalid verification provider identity", ErrUnsupported)
+		}
+		// CLI overrides outrank any settings in the restored project. Keep
+		// the original provider ID, but pin its transport to the offline sink.
+		args = append(args, verificationProviderOverrides(providers[0])...)
+	}
+	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = project
 	// A complete environment prevents inherited credentials, real HOME, remote
 	// state overrides, proxy settings, and connected service configuration.
@@ -235,7 +248,7 @@ func verificationEnvironment(home, root string) ([]string, error) {
 	if err := os.MkdirAll(userHome, 0700); err != nil {
 		return nil, err
 	}
-	return []string{"PATH=" + os.Getenv("PATH"), "HOME=" + userHome, "CODEX_HOME=" + home, "CODEX_SQLITE_HOME=" + home, "TERM=xterm-256color"}, nil
+	return []string{"PATH=" + os.Getenv("PATH"), "HOME=" + userHome, "CODEX_HOME=" + home, "CODEX_SQLITE_HOME=" + home, "TERM=xterm-256color", "OPENAI_BASE_URL=http://127.0.0.1:1"}, nil
 }
 func (c *verificationServer) call(method string, params any, result any) error {
 	c.next++
