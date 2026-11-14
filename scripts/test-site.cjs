@@ -115,6 +115,32 @@ const server = http.createServer((request, response) => {
       Object.defineProperty(document, 'hidden', { configurable: true, get: () => window.swarmTestHidden });
       const requestFrame = window.requestAnimationFrame.bind(window);
       window.requestAnimationFrame = callback => { window.swarmTestFrames++; return requestFrame(callback); };
+      // Observe the actual drawn triangles without exposing animation internals.
+      window.swarmTestTriangles = [];
+      window.swarmTestTrack = [];
+      const prototype = CanvasRenderingContext2D.prototype;
+      const paths = new WeakMap();
+      for (const method of ['clearRect', 'moveTo', 'lineTo', 'fill']) {
+        const original = prototype[method];
+        prototype[method] = function (...args) {
+          if (this.canvas.id === 'swarm-background') {
+            if (method === 'clearRect') window.swarmTestTriangles = [];
+            if (method === 'moveTo') paths.set(this, [{ x: args[0], y: args[1] }]);
+            if (method === 'lineTo') paths.get(this)?.push({ x: args[0], y: args[1] });
+            if (method === 'fill' && paths.get(this)?.length === 3) {
+              const points = paths.get(this);
+              const triangle = {
+                x: points.reduce((sum, p) => sum + p.x, 0) / 3,
+                y: points.reduce((sum, p) => sum + p.y, 0) / 3,
+                tip: points[0],
+              };
+              if (window.swarmTestTriangles.length === window.swarmTestTrackIndex) window.swarmTestTrack.push(triangle);
+              window.swarmTestTriangles.push(triangle);
+            }
+          }
+          return original.apply(this, args);
+        };
+      }
     });
     await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
     await motionPage.setViewportSize({ width: 1100, height: 760 });
@@ -131,7 +157,7 @@ const server = http.createServer((request, response) => {
         if (i % 16 === 0) alphaHash = Math.imul(alphaHash ^ data[i + 3], 16777619);
         if ((i / 4) % width < 80 && Math.floor(i / 4 / width) < 80) cornerHash = Math.imul(cornerHash ^ data[i] ^ data[i + 3], 16777619);
       }
-      return { png: canvas.toDataURL(), green, peak, alphaHash, cornerHash, frames: window.swarmTestFrames };
+      return { png: canvas.toDataURL(), green, peak, alphaHash, cornerHash, frames: window.swarmTestFrames, triangles: window.swarmTestTriangles };
     });
     const settle = () => motionPage.waitForFunction(() => {
       const now = performance.now();
@@ -145,6 +171,10 @@ const server = http.createServer((request, response) => {
     await settle();
     const idle = await pixels();
     assert.equal(idle.green, 0, 'Resting arrows are gray');
+    assert.ok(idle.triangles.length > 400 && idle.triangles.length < 900, 'The field retains the previous lighter density');
+    const trackedIndex = idle.triangles.findIndex(p => Math.hypot(550 - p.x, 280 - p.y) > 60 && Math.hypot(550 - p.x, 280 - p.y) < 100);
+    assert.ok(trackedIndex >= 0, 'A nearby arrow is available to observe');
+    await motionPage.evaluate(index => { window.swarmTestTrackIndex = index; }, trackedIndex);
     assert.equal(await motionPage.locator('#swarm-background').getAttribute('aria-hidden'), 'true');
     assert.equal(await motionPage.locator('#swarm-background').evaluate(canvas => getComputedStyle(canvas).pointerEvents), 'none');
     await motionPage.screenshot({ path: path.join(screenshots, 'swarm-idle.png') });
@@ -156,9 +186,20 @@ const server = http.createServer((request, response) => {
     assert.ok(active.peak < 170, 'The glow is subdued compared with the logo green channel (245)');
     assert.notEqual(active.alphaHash, idle.alphaHash, 'The triangle geometry rotates, not just its color');
     assert.equal(active.cornerHash, idle.cornerHash, 'Distant arrows are unaffected by the mouse');
+    const home = idle.triangles[trackedIndex], pulled = active.triangles[trackedIndex];
+    const movement = Math.hypot(pulled.x - home.x, pulled.y - home.y);
+    assert.ok(movement > 2 && movement < 12, 'Nearby arrows are gently pulled a bounded distance');
+    assert.ok(Math.hypot(550 - pulled.x, 280 - pulled.y) < Math.hypot(550 - home.x, 280 - home.y) - 2, 'The pull moves the arrow closer to the mouse');
+    const tipX = pulled.tip.x - pulled.x, tipY = pulled.tip.y - pulled.y;
+    const mouseX = 550 - pulled.x, mouseY = 280 - pulled.y;
+    assert.ok((tipX * mouseX + tipY * mouseY) / Math.hypot(tipX, tipY) / Math.hypot(mouseX, mouseY) > 0.995, 'The arrow points toward the actual mouse position');
     await motionPage.screenshot({ path: path.join(screenshots, 'swarm-active.png') });
+    await motionPage.evaluate(() => { window.swarmTestTrack = []; });
     await motionPage.mouse.move(-10, -10);
     await settle();
+    const returnPath = await motionPage.evaluate(() => window.swarmTestTrack);
+    const rebound = returnPath.map(p => ((p.x - home.x) * (pulled.x - home.x) + (p.y - home.y) * (pulled.y - home.y)) / movement);
+    assert.ok(rebound.some(distance => distance < -0.03), 'The return has a small elastic rebound before settling');
     assert.equal((await pixels()).png, idle.png, 'The field settles back to exactly its resting appearance');
     const stopped = await pixels();
     await motionPage.waitForTimeout(180);
@@ -206,7 +247,7 @@ const server = http.createServer((request, response) => {
     const capture = JSON.parse(fs.readFileSync(path.join(site, 'assets/screenshots/capture.json'), 'utf8'));
     assert.equal(capture.demo_data, true); assert.ok(!Number.isNaN(Date.parse(capture.captured_at)));
     assert.equal(capture.product, 'Twarm'); assert.equal(capture.release, '0.7.33');
-    console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, mouse-driven swarm rotation/fading, reduced motion, touch/hidden/idle behavior, and zero external requests.');
+    console.log('Website passed: 320/390/768/1024/1440 px, real screenshot assets, repository-prefix URLs, documentation links, clipboard success/fallback, keyboard navigation, mouse-driven swarm rotation/fading and elastic attraction, reduced motion, touch/hidden/idle behavior, and zero external requests.');
     console.log('Page previews: ' + screenshots);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => server.close());

@@ -25,10 +25,13 @@ details about the captured interface and demo data.
 
 `assets/swarm-background.js` draws small copies of the logo's triangular delta
 on a decorative Canvas layer. They are faint gray at rest; nearby arrows turn
-toward a mouse pointer and fade to a subdued lime, then return to gray. The
-layer cannot intercept clicks or keyboard focus. Touch devices and visitors
+toward a mouse pointer, fade to a subdued lime, and move slightly closer as if
+magnetically attracted. Anchored, damped springs resist the pull and gently
+rebound to their original positions when the pointer leaves. The layer cannot
+intercept clicks or keyboard focus. Touch devices and visitors
 requesting reduced motion see a static pattern. Animation stops when settled
 or when the tab is hidden; pixel density and arrow count are bounded.
 
-`node scripts/test-site.cjs` checks the real pointer response, fading, idle
+`node scripts/test-site.cjs` checks the real pointer response, elastic attraction,
+spring-back, fading, idle
 animation shutdown, reduced-motion/touch behavior and normal site navigation.

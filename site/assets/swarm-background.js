@@ -34,8 +34,8 @@
       for (let i = 0; i < vertices.length; i++) {
         const point = vertices[i];
         const x = point[0] * arrow.size / 28, y = point[1] * arrow.size / 28;
-        const px = arrow.x + x * cosine - y * sine;
-        const py = arrow.y + x * sine + y * cosine;
+        const px = arrow.x + arrow.offsetX + x * cosine - y * sine;
+        const py = arrow.y + arrow.offsetY + x * sine + y * cosine;
         if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       }
       ctx.closePath();
@@ -54,8 +54,26 @@
     for (const arrow of arrows) {
       const dx = pointer.x - arrow.x, dy = pointer.y - arrow.y;
       const proximity = interactive ? Math.max(0, 1 - Math.hypot(dx, dy) / radius) : 0;
+      // Anchored springs resist the pull: even at full influence arrows move
+      // less than ten pixels, then gently rebound to their original positions.
+      const targetX = dx * proximity * 0.18, targetY = dy * proximity * 0.18;
+      let remaining = elapsed / 1000;
+      while (remaining > 0) {
+        const step = Math.min(remaining, 1 / 120);
+        arrow.velocityX += ((targetX - arrow.offsetX) * 130 - arrow.velocityX * 14) * step;
+        arrow.velocityY += ((targetY - arrow.offsetY) * 130 - arrow.velocityY * 14) * step;
+        arrow.offsetX += arrow.velocityX * step;
+        arrow.offsetY += arrow.velocityY * step;
+        remaining -= step;
+      }
+      if (Math.hypot(targetX - arrow.offsetX, targetY - arrow.offsetY) > 0.015 ||
+          Math.hypot(arrow.velocityX, arrow.velocityY) > 0.03) unsettled = true;
+      else {
+        arrow.offsetX = targetX; arrow.offsetY = targetY;
+        arrow.velocityX = arrow.velocityY = 0;
+      }
       const glow = proximity * proximity;
-      const angle = proximity > 0 ? Math.atan2(dy, dx) + Math.PI / 2 : arrow.restAngle;
+      const angle = proximity > 0 ? Math.atan2(dy - arrow.offsetY, dx - arrow.offsetX) + Math.PI / 2 : arrow.restAngle;
       const delta = Math.atan2(Math.sin(angle - arrow.angle), Math.cos(angle - arrow.angle));
       if (Math.abs(delta) > 0.003) {
         arrow.angle += delta * (1 - Math.exp(-elapsed / 145));
@@ -80,7 +98,10 @@
     pointer.active = false;
     if (frame) cancelAnimationFrame(frame);
     frame = previousTime = 0;
-    for (const arrow of arrows) { arrow.angle = arrow.restAngle; arrow.glow = 0; }
+    for (const arrow of arrows) {
+      arrow.angle = arrow.restAngle; arrow.glow = 0;
+      arrow.offsetX = arrow.offsetY = arrow.velocityX = arrow.velocityY = 0;
+    }
     if (!document.hidden) paint();
   }
 
@@ -92,7 +113,7 @@
     canvas.width = Math.max(1, Math.round(width * scale));
     canvas.height = Math.max(1, Math.round(height * scale));
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    const spacing = Math.max(18, Math.sqrt(width * height / 6400));
+    const spacing = Math.max(36, Math.sqrt(width * height / 1600));
     arrows = [];
     for (let row = 0; row < Math.ceil(height / spacing); row++) {
       for (let column = 0; column < Math.ceil(width / spacing); column++) {
@@ -102,6 +123,7 @@
           y: (row + 0.5 + (noise(column, row, 2) - 0.5) * 0.45) * spacing,
           size: 6 + noise(column, row, 4) * 4,
           restAngle: angle, angle, glow: 0,
+          offsetX: 0, offsetY: 0, velocityX: 0, velocityY: 0,
         });
       }
     }
